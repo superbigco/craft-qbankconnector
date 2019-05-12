@@ -1,0 +1,56 @@
+{# @var craft \craft\web\twig\variables\CraftVariable #}
+{#
+/**
+ * QBank Connector plugin for Craft CMS 3.x
+ *
+ * QBank Connector Settings.twig
+ *
+ * @author    Superbig
+ * @copyright Copyright (c) 2019 Superbig
+ * @link      https://superbig.co
+ * @package   QbankConnector
+ * @since     1.0.0
+ */
+#}
+
+{% import "_includes/forms" as forms %}
+
+{% do view.registerAssetBundle("superbig\\qbankconnector\\assetbundles\\qbankconnector\\QbankConnectorAsset") %}
+
+{{ forms.textField({
+    label: 'Client ID',
+    instructions: 'The Client ID you received from QBank.',
+    id: 'clientId',
+    name: 'clientId',
+    required: true,
+    autofocus: true,
+    value: settings['clientId']})
+}}
+
+
+{{ forms.textField({
+    label: 'Username',
+    instructions: 'The username you received from QBank.',
+    id: 'username',
+    name: 'username',
+    required: true,
+    value: settings['username']})
+}}
+
+{{ forms.textField({
+    label: 'Password',
+    instructions: 'The password you received from QBank.',
+    id: 'password',
+    name: 'password',
+    required: true,
+    value: settings['password']})
+}}
+
+{{ forms.textField({
+    label: 'Session Source ID',
+    instructions: 'The Session Source ID you received from QBank.',
+    id: 'sessionSourceId',
+    name: 'sessionSourceId',
+    required: true,
+    value: settings['sessionSourceId']})
+}}

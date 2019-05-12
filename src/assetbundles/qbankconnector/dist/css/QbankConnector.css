@@ -1,0 +1,26 @@
+/**
+ * QBank Connector plugin for Craft CMS
+ *
+ * QBank Connector CSS
+ *
+ * @author    Superbig
+ * @copyright Copyright (c) 2019 Superbig
+ * @link      https://superbig.co
+ * @package   QbankConnector
+ * @since     1.0.0
+ */
+.qbank-modal {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    z-index: 99999;
+}
+
+.qbank-connector-modal {}
+.qbank-connector-modal .main {
+    overflow: initial !important;
+    padding: 0 0 0 20px !important;
+    height: 100% !important;
+}

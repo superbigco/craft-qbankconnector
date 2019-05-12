@@ -1,0 +1,42 @@
+{
+  "name": "superbig/craft-qbankconnector",
+  "description": "Connect Craft to QBank's DAM",
+  "type": "craft-plugin",
+  "version": "1.0.0",
+  "keywords": [
+    "craft",
+    "cms",
+    "craftcms",
+    "craft-plugin",
+    "qbank connector",
+    "dam"
+  ],
+  "support": {
+    "docs": "https://github.com/superbigco/craft-qbankconnector/blob/master/README.md",
+    "issues": "https://github.com/superbigco/craft-qbankconnector/issues"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Superbig",
+      "homepage": "https://superbig.co"
+    }
+  ],
+  "require": {
+    "craftcms/cms": "^3.1.0",
+    "qbnk/qbank3api-phpwrapper": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "superbig\\qbankconnector\\": "src/"
+    }
+  },
+  "extra": {
+    "name": "QBank Connector",
+    "handle": "qbank-connector",
+    "hasCpSettings": true,
+    "hasCpSection": false,
+    "changelogUrl": "https://raw.githubusercontent.com/superbigco/craft-qbankconnector/master/CHANGELOG.md",
+    "class": "superbig\\qbankconnector\\QbankConnector"
+  }
+}
