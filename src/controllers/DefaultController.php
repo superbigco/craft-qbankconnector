@@ -11,6 +11,7 @@
 namespace superbig\qbankconnector\controllers;
 
 use Sainsburys\Guzzle\Oauth2\AccessToken;
+use superbig\qbankconnector\models\MediaModel;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -43,13 +44,43 @@ class DefaultController extends Controller
     public function actionDownloadAsset()
     {
         $request   = Craft::$app->getRequest();
+        $url       = $request->getRequiredParam('url');
+        $crop      = $request->getRequiredParam('crop');
+        $media     = $request->getRequiredParam('media');
         $folderId  = $request->getBodyParam('folderId');
         $fieldId   = $request->getBodyParam('fieldId');
         $elementId = $request->getBodyParam('elementId');
 
-        return $this->asJson([
-            'success' => false,
+        $media = new MediaModel([
+            'url'             => $url,
+            'filename'        => $media['filename'],
+            'mediaId'         => $media['mediaId'],
+            'template'        => $crop['template'],
+            'name'            => $media['name'],
+            'dimensions'      => $media['dimensions'],
+            'extension'       => $crop['extension'],
+            'objectId'        => $media['objectId'],
+            'folderId'        => $folderId,
+            'fieldId'         => $fieldId,
+            'sourceElementId' => $elementId,
         ]);
+
+        $success = QbankConnector::$plugin->getService()->downloadFile($media);
+        $result  = [
+            'success' => true,
+            'assetId' => $media->assetId,
+        ];
+
+        if (!$success) {
+            $result = [
+                'success' => false,
+                'error'   => $media->getFirstError('url'),
+            ];
+        }
+
+        // @todo Download asset
+
+        return $this->asJson($result);
     }
 
     public function actionAccessToken()

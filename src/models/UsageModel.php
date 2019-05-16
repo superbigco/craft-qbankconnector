@@ -20,20 +20,16 @@ use craft\base\Model;
  * @package   QbankConnector
  * @since     1.0.0
  */
-class Settings extends Model
+class UsageModel extends Model
 {
     // Public Properties
     // =========================================================================
 
-    public $connectionTimeout = 10;
-    public $clientId          = '';
-    public $sessionSourceId   = '';
-    public $username          = '';
-    public $password          = '';
-    public $defaultImageSize  = 1000;
-    public $qbankBaseDomain   = 'sales.qbank.se';
-    public $qbankBaseUrl      = 'https://sales.qbank.se/connector/';
-    public $deploymentSiteId  = null;
+    public $elementId;
+    public $id;
+    public $fileId;
+    public $objectId;
+    public $assetId;
 
     // Public Methods
     // =========================================================================
@@ -44,8 +40,7 @@ class Settings extends Model
     public function rules()
     {
         return [
-            [['clientId', 'sessionSourceId'], 'string'],
-            [['clientId', 'sessionSourceId'], 'required'],
+            [['elementId', 'fileId'], 'required'],
         ];
     }
 }

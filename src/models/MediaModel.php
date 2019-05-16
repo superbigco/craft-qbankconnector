@@ -41,12 +41,17 @@ class MediaModel extends Model
     public $objectHash;
     public $data;
 
+    // Asset settings
+    public $folderId;
+    public $sourceElementId;
+    public $fieldId;
+
     // Public Methods
     // =========================================================================
 
     public function getTempFilename(): string
     {
-        $filename = \str_replace(".{$this->filename}", '', $this->filename);
+        $filename = \str_replace(".{$this->extension}", '', $this->filename);
 
         if ($this->template) {
             $filename = $filename . $this->getObjectHash();

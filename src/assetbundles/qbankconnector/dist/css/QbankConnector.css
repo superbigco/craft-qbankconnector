@@ -24,3 +24,22 @@
     padding: 0 0 0 20px !important;
     height: 100% !important;
 }
+
+.qbank-connector-modal .progress-shade {
+    background: rgba(255, 255, 255, 0.8);
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+@include left(0);
+    display: none;
+}
+
+.qbank-connector-modal.uploading .main {
+    position: relative;
+}
+
+.qbank-connector-modal.uploading .progress-shade {
+    display: block;
+    z-index: 2;
+}
