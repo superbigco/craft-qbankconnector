@@ -13,6 +13,7 @@ namespace superbig\qbankconnector\services;
 use craft\base\Element;
 use craft\db\Query;
 use craft\elements\Asset;
+use craft\elements\User;
 use craft\events\ModelEvent;
 use craft\helpers\Assets as AssetsHelper;
 use craft\helpers\FileHelper;
@@ -21,6 +22,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use QBNK\QBank\API\CachePolicy;
 use QBNK\QBank\API\Credentials;
+use QBNK\QBank\API\Model\MediaUsage;
 use QBNK\QBank\API\QBankApi;
 use superbig\qbankconnector\base\Cache;
 use superbig\qbankconnector\models\MediaModel;
@@ -154,12 +156,14 @@ class QbankConnectorService extends Component
         /** @var Element $element */
         $element         = $event->sender;
         $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
+        $qbankClient     = $this->getQbankClient();
         $existingUsage   = $this
             ->_createUsageQuery()
             ->select([
-                'usageId' => 'usage.id',
-                'fileId'  => 'usage.fileId',
-                'assetId' => 'files.assetId',
+                'usageRecordId' => 'usage.id',
+                'usageId'       => 'usage.usageId',
+                'fileId'        => 'usage.fileId',
+                'assetId'       => 'files.assetId',
             ])
             ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileID]]')
             ->where([
@@ -178,16 +182,18 @@ class QbankConnectorService extends Component
         $existingAssetIds = \array_map(function($row) {
             return $row['assetId'];
         }, $existingUsage);
+        $objectMap        = [];
+        $usageMap         = [];
 
-        $objectMap = [];
-        $usageMap  = [];
         foreach ($existingFiles as $object) {
             $objectMap[ $object['assetId'] ] = $object;
         }
+
         foreach ($existingUsage as $usage) {
             $usageMap[ $usage['assetId'] ] = $usage;
         }
 
+        $sessionId = $this->getSessionId();
         foreach ($relatedAssetIds as $assetId) {
             if (!\in_array($assetId, $existingAssetIds)) {
                 $objectId = $objectMap[ $assetId ]['objectId'] ?? null;
@@ -198,12 +204,30 @@ class QbankConnectorService extends Component
                         'elementId' => $element->id,
                     ]);
 
+                    $asset = Asset::find()->id($assetId)->one();
+
+                    $mediaUsage = new MediaUsage([
+                        'mediaId'  => $objectMap[ $assetId ]['mediaId'],
+                        'mediaUrl' => $asset->getUrl(),
+                        'pageUrl'  => $element->getUrl(),
+                        // @todo Add context as setting?
+                        'context'  => ['Craft'],
+                        // @todo Add language as setting?
+                        'language' => 'NO',
+                    ]);
+
+                    // @todo Handle exception
+                    $response = $qbankClient
+                        ->events()
+                        ->addUsage($sessionId, $mediaUsage);
+
                     $this
                         ->_createUsageQuery()
                         ->createCommand()
                         ->insert(QbankConnectorUsageRecord::tableName(), [
                             'fileId'    => $usage->fileId,
                             'elementId' => $usage->elementId,
+                            'usageId'   => $response->getId(),
                         ])
                         ->execute();
                 }
@@ -213,19 +237,28 @@ class QbankConnectorService extends Component
         $deleteUsageIds = [];
         foreach ($existingAssetIds as $assetId) {
             if (!\in_array($assetId, $relatedAssetIds)) {
-                $deleteUsageIds[] = $usageMap[ $assetId ]['usageId'];
-
+                $key                    = $usageMap[ $assetId ]['usageRecordId'];
+                $deleteUsageIds[ $key ] = $usageMap[ $assetId ]['usageId'];
             }
         }
 
         if (!empty($deleteUsageIds)) {
             Craft::info('Removing usage: ' . Json::encode($deleteUsageIds), 'qbank-connector');
 
+            foreach ($deleteUsageIds as $usageId) {
+                if (!empty($usageId)) {
+                    // @todo Handle exception
+                    $qbankClient
+                        ->events()
+                        ->removeUsage($usageId);
+                }
+            }
+
             $this
                 ->_createUsageQuery()
                 ->createCommand()
                 ->delete(QbankConnectorUsageRecord::tableName(), [
-                    'id'        => $deleteUsageIds,
+                    'id'        => \array_keys($deleteUsageIds),
                     'elementId' => $element->id,
                 ])
                 ->execute();
@@ -276,6 +309,7 @@ class QbankConnectorService extends Component
             ->createCommand()
             ->insert(QbankConnectorRecord::tableName(), [
                 'assetId'    => $media->assetId,
+                'mediaId'    => $media->mediaId,
                 'objectId'   => $media->objectId,
                 'objectHash' => $media->getObjectHash(),
             ])
@@ -298,6 +332,42 @@ class QbankConnectorService extends Component
         return true;
     }
 
+    public function getSessionId()
+    {
+        $getSessionId = function() {
+            $settings  = QbankConnector::$plugin->getSettings();
+            $user      = Craft::$app->getUser()->getIdentity() ?? User::find()->one();
+            $userIp    = '127.0.0.1';
+            $userAgent = 'Chrome';
+
+            if (!Craft::$app->getRequest()->getIsConsoleRequest()) {
+                $userIp    = Craft::$app->getRequest()->getUserIP();
+                $userAgent = Craft::$app->getRequest()->getUserAgent();
+            }
+
+            $sessionId = $this->getQbankClient()->events()->session(
+                $settings->sessionSourceId,
+                $user->uid,
+                $userIp,
+                $userAgent
+            );
+
+            return $sessionId;
+        };
+
+        if (Craft::$app->getRequest()->getIsConsoleRequest()) {
+            return $getSessionId();
+        }
+
+        $session = Craft::$app->getSession();
+
+        if (!$session->has('QBANK_SESSION')) {
+            $session->set('QBANK_SESSION', $getSessionId());
+        }
+
+        return $session->get('QBANK_SESSION');
+    }
+
     public function _createQuery()
     {
         return (new Query())
@@ -305,6 +375,7 @@ class QbankConnectorService extends Component
             ->select([
                 'id',
                 'assetId',
+                'mediaId',
                 'objectId',
                 'objectHash',
             ]);
