@@ -86,6 +86,7 @@ class Install extends Migration
                     'uid'         => $this->uid(),
                     'assetId'     => $this->integer()->notNull(),
                     'objectId'    => $this->integer(),
+                    'mediaId'     => $this->integer(),
                     'objectHash'  => $this->string(),
                 ]
             );
@@ -103,6 +104,7 @@ class Install extends Migration
                     'uid'         => $this->uid(),
                     'fileId'      => $this->integer()->notNull(),
                     'elementId'   => $this->integer()->notNull(),
+                    'usageId'     => $this->integer(),
                 ]
             );
         }
