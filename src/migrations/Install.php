@@ -226,7 +226,7 @@ class Install extends Migration
      */
     protected function removeTables()
     {
-        $this->dropTableIfExists(QbankConnectorRecord::tableName());
         $this->dropTableIfExists(QbankConnectorUsageRecord::tableName());
+        $this->dropTableIfExists(QbankConnectorRecord::tableName());
     }
 }
