@@ -24,20 +24,39 @@ To install the plugin, follow these instructions.
 
 ## QBank Connector Overview
 
--Insert text here-
+>Bank is a smart Digital Asset Management that store, manage and publish your digital assets. Connect with your communications tool for more effective workflow.
+
+Read more at [qbankdam.com](https://www.qbankdam.com/en/start).
 
 ## Configuring QBank Connector
 
--Insert text here-
+There is a sample config file located at `src/config.php`. Copy it to `craft/config` as `qbank-connector.php` 
+and make your changes there to override default settings.
+
+```php
+<?php
+return [
+    // These will be supplied by QBank
+    'clientId'         => '',
+    'sessionSourceId'  => '',
+    'username'         => '',
+    'password'         => '',
+    'deploymentSiteId' => null,
+
+    // By default 'sales.qbank.se'
+    'baseRef'          => '',
+];
+
+```
 
 ## Using QBank Connector
 
--Insert text here-
+After you install the plugin, a `Upload from QBank` button will appear under all Asset fields and in Asset Indexes (including the modal when you click the assets select button).
+
+This allow you to add assets from QBank directly to Assets fields or through the normal Assets selection modal.
 
 ## QBank Connector Roadmap
 
-Some things to do, and ideas for potential features:
-
-* Release it
+* Log usage async with queue jobs
 
 Brought to you by [Superbig](https://superbig.co)
