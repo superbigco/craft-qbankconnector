@@ -24,7 +24,7 @@ To install the plugin, follow these instructions.
 
 ## QBank Connector Overview
 
->Bank is a smart Digital Asset Management that store, manage and publish your digital assets. Connect with your communications tool for more effective workflow.
+>QBank is a smart Digital Asset Management that store, manage and publish your digital assets. Connect with your communications tool for more effective workflow.
 
 Read more at [qbankdam.com](https://www.qbankdam.com/en/start).
 
