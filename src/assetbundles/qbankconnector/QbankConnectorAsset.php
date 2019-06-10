@@ -36,6 +36,8 @@ class QbankConnectorAsset extends AssetBundle
         ];
 
         $this->js = [
+            'js/QbankConnectorModal.js',
+            'js/QbankConnectorFields.js',
             'js/QbankConnector.js',
         ];
 

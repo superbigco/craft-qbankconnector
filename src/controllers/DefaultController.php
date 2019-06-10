@@ -49,7 +49,7 @@ class DefaultController extends Controller
         $media     = $request->getRequiredParam('media');
         $folderId  = $request->getBodyParam('folderId');
         $fieldId   = $request->getBodyParam('fieldId');
-        $elementId = $request->getBodyParam('elementId');
+        $elementId = $request->getBodyParam('sourceElementId');
 
         $media = new MediaModel([
             'url'             => $url,

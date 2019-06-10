@@ -103,7 +103,7 @@ class QbankConnectorService extends Component
             // Insert as Asset
             //Craft::$app->getAssetIndexer()->indexFile()
             $filename  = $media->getTempFilename();
-            $folderUid = 1;
+            $folderUid = $media->getFolderId();
             $folder    = Craft::$app->getAssets()->getFolderById($folderUid);
 
             if (!$folder) {
@@ -111,7 +111,7 @@ class QbankConnectorService extends Component
             }
 
             if ($this->mediaExists($media)) {
-                return true;
+                //return true;
             }
 
             $volume                        = $folder->getVolume();
@@ -165,7 +165,7 @@ class QbankConnectorService extends Component
                 'fileId'        => 'usage.fileId',
                 'assetId'       => 'files.assetId',
             ])
-            ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileID]]')
+            ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
             ->where([
                 'usage.elementId' => $element->id,
             ])
@@ -199,7 +199,8 @@ class QbankConnectorService extends Component
                 $objectId = $objectMap[ $assetId ]['objectId'] ?? null;
 
                 if ($objectId) {
-                    $usage = new UsageModel([
+                    $pageTitle = $element->title ?? '';
+                    $usage     = new UsageModel([
                         'fileId'    => $objectMap[ $assetId ]['id'],
                         'elementId' => $element->id,
                     ]);
@@ -211,7 +212,10 @@ class QbankConnectorService extends Component
                         'mediaUrl' => $asset->getUrl(),
                         'pageUrl'  => $element->getUrl(),
                         // @todo Add context as setting?
-                        'context'  => ['Craft'],
+                        'context'  => [
+                            'localID'   => $assetId,
+                            'pageTitle' => $pageTitle,
+                        ],
                         // @todo Add language as setting?
                         'language' => 'NO',
                     ]);
@@ -275,10 +279,42 @@ class QbankConnectorService extends Component
     public function onElementBeforeDelete(ModelEvent $event)
     {
         /** @var Element $element */
-        $element = $event->sender;
+        $element     = $event->sender;
+        $qbankClient = $this->getQbankClient();
 
         if ($element instanceof Asset) {
             // @todo Check if this is a Qbank Asset, and unregister it
+            $existingUsage = $this
+                ->_createUsageQuery()
+                ->select([
+                    'usageRecordId' => 'usage.id',
+                    'usageId'       => 'usage.usageId',
+                    'fileId'        => 'usage.fileId',
+                    'assetId'       => 'files.assetId',
+                ])
+                ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
+                ->where([
+                    'usage.elementId' => $element->id,
+                ])
+                ->all();
+        }
+        else {
+            $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
+            $existingFiles   = $this
+                ->_createQuery()
+                ->where(['assetId' => $relatedAssetIds])
+                ->all();
+
+            foreach ($existingFiles as $row) {
+                $usageId = $row['usageId'] ?? null;
+
+                if (!empty($usageId)) {
+                    // @todo Handle exception
+                    $qbankClient
+                        ->events()
+                        ->removeUsage($usageId);
+                }
+            }
         }
     }
 
@@ -294,15 +330,21 @@ class QbankConnectorService extends Component
 
     public function saveMedia(MediaModel $media)
     {
+        /*
         $existingQuery = $this
             ->_createQuery()
-            ->where(['objectId' => $media->objectId, 'objectHash' => $media->objectHash])
+            ->where([
+                'objectId'   => $media->objectId,
+                'objectHash' => $media->objectHash,
+            ])
             ->one();
 
         if ($existingQuery) {
             // @todo What to do here? Don't need to download if already exists
+            // @todo Probably should include asset's folder id as unique constraint
             return true;
         }
+        */
 
         return $this
             ->_createQuery()

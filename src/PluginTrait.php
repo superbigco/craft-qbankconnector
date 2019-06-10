@@ -14,6 +14,7 @@ use Craft;
 use craft\helpers\Json;
 use craft\log\FileTarget;
 use craft\services\Plugins;
+use craft\web\View;
 use superbig\qbankconnector\assetbundles\QbankConnector\QbankConnectorAsset;
 use superbig\qbankconnector\services\QbankConnectorService;
 use yii\base\Event;
@@ -106,7 +107,8 @@ trait PluginTrait
                 $view           = Craft::$app->getView();
                 $view->registerAssetBundle(QbankConnectorAsset::class);
                 $view->registerJsFile($connectorJsUrl);
-                $view->registerJs("new Craft.QbankConnector.Init({$settings});");
+                $view->registerJs("new Craft.QbankConnectorFields({$settings});");
+                $view->registerJs("new Craft.QbankConnector({$settings});", View::POS_END);
             }
         });
     }

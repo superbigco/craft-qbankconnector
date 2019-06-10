@@ -43,3 +43,11 @@
     display: block;
     z-index: 2;
 }
+
+/**
+    Asset Index
+ */
+
+.qbank-upload-button--assetindex {
+    margin-right: 7px;
+}

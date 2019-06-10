@@ -10,6 +10,7 @@
 
 namespace superbig\qbankconnector\models;
 
+use craft\fields\Assets;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -69,6 +70,24 @@ class MediaModel extends Model
         }
 
         return \md5($object);
+    }
+
+    public function getFolderId()
+    {
+        $folderId = (int)$this->folderId;
+
+        if (!empty($this->sourceElementId) && !empty($this->fieldId)) {
+            /** @var Assets $field */
+            $field   = Craft::$app->getFields()->getFieldById((int)$this->fieldId);
+            $element = Craft::$app->getElements()->getElementById((int)$this->sourceElementId);
+
+            if ($element) {
+                $dynamicFolderId = $field->resolveDynamicPathToFolderId($element);
+                $folderId        = !empty($dynamicFolderId) ? $dynamicFolderId : $folderId;
+            }
+        }
+
+        return $folderId;
     }
 
     /**
