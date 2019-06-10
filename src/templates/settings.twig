@@ -27,7 +27,6 @@
     value: settings['clientId']})
 }}
 
-
 {{ forms.textField({
     label: 'Username',
     instructions: 'The username you received from QBank.',
@@ -53,4 +52,13 @@
     name: 'sessionSourceId',
     required: true,
     value: settings['sessionSourceId']})
+}}
+
+{{ forms.textField({
+    label: 'Deployment Site ID',
+    instructions: 'The Deployment Site ID you received from QBank.',
+    id: 'deploymentSiteId',
+    name: 'deploymentSiteId',
+    required: true,
+    value: settings['deploymentSiteId']})
 }}

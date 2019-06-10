@@ -23,10 +23,13 @@
  */
 
 return [
+    // These will be supplied by QBank
     'clientId'         => '',
     'sessionSourceId'  => '',
     'username'         => '',
     'password'         => '',
-    'baseRef'          => '',
     'deploymentSiteId' => null,
+
+    // By default 'sales.qbank.se'
+    'baseRef'          => '',
 ];
