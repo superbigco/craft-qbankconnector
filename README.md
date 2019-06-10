@@ -2,7 +2,7 @@
 
 Connect Craft to QBank's DAM
 
-![Screenshot](resources/img/plugin-logo.png)
+![Screenshot](resources/icon.png)
 
 ## Requirements
 
