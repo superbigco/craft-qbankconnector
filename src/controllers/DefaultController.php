@@ -25,21 +25,13 @@ use craft\web\Controller;
 class DefaultController extends Controller
 {
 
-    // Protected Properties
-    // =========================================================================
-
-    /**
-     * @var    bool|array Allows anonymous access to this controller's actions.
-     *         The actions must be in 'kebab-case'
-     * @access protected
-     */
-    protected $allowAnonymous = [];
-
     // Public Methods
     // =========================================================================
 
     /**
      * @return mixed
+     * @throws \yii\base\Exception
+     * @throws \yii\web\BadRequestHttpException
      */
     public function actionDownloadAsset()
     {
@@ -83,6 +75,9 @@ class DefaultController extends Controller
         return $this->asJson($result);
     }
 
+    /**
+     * @return \yii\web\Response
+     */
     public function actionAccessToken()
     {
         $client = QbankConnector::$plugin->getService()->getQbankClient();
