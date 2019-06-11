@@ -221,6 +221,8 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
                     // .css(Craft.left, 0);
                 }
 
+                $select.addClass('elementselect--qbank');
+
                 // Append button to Asset field
                 $addElementBtn.parent().append($qbankButton);
 

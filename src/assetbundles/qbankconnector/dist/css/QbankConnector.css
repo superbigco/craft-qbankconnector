@@ -45,9 +45,15 @@
 }
 
 /**
+    Asset Fields
+ */
+.elementselect.elementselect--qbank {
+    min-height: 74px;
+}
+
+/**
     Asset Index
  */
-
 .qbank-upload-button--assetindex {
     margin-right: 7px;
 }
