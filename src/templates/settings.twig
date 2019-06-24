@@ -62,3 +62,13 @@
     required: true,
     value: settings['deploymentSiteId']})
 }}
+
+
+{{ forms.textField({
+    label: 'QBank Base Domain',
+    instructions: 'The domain to make API calls against',
+    id: 'qbankBaseDomain',
+    name: 'qbankBaseDomain',
+    required: true,
+    value: settings['qbankBaseDomain']})
+}}
