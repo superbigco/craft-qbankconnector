@@ -25,15 +25,17 @@ class Settings extends Model
     // Public Properties
     // =========================================================================
 
-    public $connectionTimeout = 10;
-    public $clientId          = '';
-    public $sessionSourceId   = '';
-    public $username          = '';
-    public $password          = '';
-    public $defaultImageSize  = 1000;
-    public $qbankBaseDomain   = 'sales.qbank.se';
-    public $qbankBaseUrl      = 'https://sales.qbank.se/connector/';
-    public $deploymentSiteId  = null;
+    public $connectionTimeout    = 10;
+    public $clientId             = '';
+    public $sessionSourceId      = '';
+    public $username             = '';
+    public $password             = '';
+    public $defaultImageSize     = 1000;
+    public $qbankBaseDomain      = 'sales.qbank.se';
+    public $qbankBaseUrl         = 'https://sales.qbank.se/connector/';
+    public $deploymentSiteId     = null;
+    public $enableForAssetFields = true;
+    public $enableForAssetIndex  = true;
 
     // Public Methods
     // =========================================================================

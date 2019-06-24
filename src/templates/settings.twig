@@ -63,7 +63,6 @@
     value: settings['deploymentSiteId']})
 }}
 
-
 {{ forms.textField({
     label: 'QBank Base Domain',
     instructions: 'The domain to make API calls against',
@@ -71,4 +70,20 @@
     name: 'qbankBaseDomain',
     required: true,
     value: settings['qbankBaseDomain']})
+}}
+
+{{ forms.lightswitchField({
+    label: 'Assets Fields',
+    instructions: 'Show the QBank upload button on Asset Fields',
+    id: 'enableForAssetFields',
+    name: 'enableForAssetFields',
+    on: settings['enableForAssetFields']})
+}}
+
+{{ forms.lightswitchField({
+    label: 'Assets Index',
+    instructions: 'Show the QBank upload button on Asset Indexes',
+    id: 'enableForAssetIndex',
+    name: 'enableForAssetIndex',
+    on: settings['enableForAssetIndex']})
 }}

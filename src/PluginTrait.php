@@ -96,19 +96,26 @@ trait PluginTrait
                     return;
                 }
 
-                $connectorJsUrl = 'https://sales.qbank.se/connector/qbank-connector.min.js';
-                $settings       = QbankConnector::$plugin->getSettings();
-                $settings       = Json::encode([
+                $connectorJsUrl  = 'https://sales.qbank.se/connector/qbank-connector.min.js';
+                $settings        = QbankConnector::$plugin->getSettings();
+                $encodedSettings = Json::encode([
                     'sessionSourceId'  => $settings->sessionSourceId,
                     'deploymentSiteId' => $settings->deploymentSiteId,
                     'qbankBaseDomain'  => $settings->qbankBaseDomain,
                     'qbankBaseUrl'     => $settings->qbankBaseUrl,
                 ]);
-                $view           = Craft::$app->getView();
+                $view            = Craft::$app->getView();
                 $view->registerAssetBundle(QbankConnectorAsset::class);
                 $view->registerJsFile($connectorJsUrl);
-                $view->registerJs("new Craft.QbankConnectorFields({$settings});");
-                $view->registerJs("new Craft.QbankConnector({$settings});", View::POS_END);
+
+                if ($settings->enableForAssetFields) {
+                    $view->registerJs("new Craft.QbankConnectorFields({$encodedSettings});");
+                }
+
+                if ($settings->enableForAssetIndex) {
+                    $view->registerJs("new Craft.QbankConnector({$encodedSettings});", View::POS_END);
+                }
+
             }
         });
     }
