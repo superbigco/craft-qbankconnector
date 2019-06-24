@@ -25,7 +25,7 @@ if (typeof Craft.QbankConnector === typeof undefined) {
             qbankBaseUrl: null,
             qbankBaseDomain: null,
             defaultImageSize: 1000,
-            defaultImageExtension: 'jpg',
+            defaultImageExtension: 'jpg'
         },
         $qbankConnectorButton: null,
         $modal: null,
@@ -44,7 +44,7 @@ if (typeof Craft.QbankConnector === typeof undefined) {
             Garnish.on(Craft.AssetIndex, 'selectSource', $.proxy(this, 'onSelectSource'));
             Garnish.on(Craft.BaseElementIndex, 'init', $.proxy(this, 'onAssetIndex'));
 
-            this.settings = {...this.settings, ...options}
+            this.settings = $.extend({}, this.settings, options);
 
             //this.setup();
             //this.setupConnector();
@@ -66,15 +66,16 @@ if (typeof Craft.QbankConnector === typeof undefined) {
             Garnish.on(Craft.QbankField, 'onClickButton', $.proxy(this, 'onClickAssetButton'))
         },
 
-        getAccessToken() {
-            Craft.postActionRequest('qbank-connector/default/access-token', response => {
-                const {token} = response;
+        getAccessToken: function () {
+            var self = this;
+            Craft.postActionRequest('qbank-connector/default/access-token', function (response) {
+                var token = response.token;
 
                 if (!token) {
                     Craft.cp.displayError(Craft.t('qbank-connect', 'Could not get access token from QBank'))
                 }
 
-                this.settings.qbankAccessToken = token;
+                self.settings.qbankAccessToken = token;
             });
         },
 
@@ -103,23 +104,33 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         },
         onSelectSource: function (e) {
             if (typeof e.target.sourcesByKey !== 'undefined') {
-                const $sourceElement = e.target.sourcesByKey[e.sourceKey];
-                const sourceData = $sourceElement.data();
+                var $sourceElement = e.target.sourcesByKey[e.sourceKey];
+                var sourceData = $sourceElement.data();
                 this.activeFolderId = $sourceElement.data('folder-id');
             }
         },
 
         onAssetIndex: function (event) {
-            const $assetIndex = event.target;
-            const $uploadButton = $assetIndex.$uploadButton;
+            var $assetIndex = event.target;
+            var $uploadButton = $assetIndex.$uploadButton;
 
             if ($uploadButton.length) {
                 this.getAccessToken();
 
-                const selectedSourceKey = $assetIndex.instanceState.selectedSource;
+                var selectedSourceKey = $assetIndex.instanceState.selectedSource;
+                var activeSource = $assetIndex.sourcesByKey[selectedSourceKey];
+                var sourceKeys = Object.keys($assetIndex.sourcesByKey);
+                var firstSourceKey = sourceKeys.length > 0 ? sourceKeys[0] : null;
+
+                if (!firstSourceKey) {
+                    console.log('Returning because no source')
+                    return;
+                }
+
                 this.activeAssetIndex = $assetIndex;
-                this.activeFolderId = $assetIndex.sourcesByKey[selectedSourceKey][0].dataset.folderId;
-                const $qbankButton = $uploadButton
+                this.activeFolderId = activeSource ? $assetIndex.sourcesByKey[selectedSourceKey][0].dataset.folderId : null;
+                debugger;
+                var $qbankButton = $uploadButton
                     .clone()
                     .text(Craft.t('qbank-connector', 'Upload from QBank'))
                     .addClass('qbank-upload-button--assetindex')
@@ -132,33 +143,35 @@ if (typeof Craft.QbankConnector === typeof undefined) {
 
         onClickAssetIndexButton: function () {
             if (this.activeAssetIndex) {
-                const settings = {
+                var settings = {
                     folderId: this.activeFolderId,
-                    viewMode: this.activeAssetIndex.getSelectedViewMode(),
-                }
+                    viewMode: this.activeAssetIndex.getSelectedViewMode()
+                };
 
                 // Update settings
-                this.settings = {...this.settings, ...settings};
+                this.settings = $.extend({}, this.settings, settings);
                 this._openConnectorModal();
             }
         },
 
         onClickAssetButton: function (event) {
-            const {field, fieldId, fieldLimit, sourceElementId} = event;
-            const settings = {
-                fieldId, fieldLimit, sourceElementId,
-                viewMode: 'list',
-            }
+            var settings = {
+                fieldId: event.fieldId,
+                fieldLimit: event.fieldLimit,
+                sourceElementId: event.sourceElementId,
+                viewMode: 'list'
+            };
 
             // Update settings
-            this.settings = {...this.settings, ...settings};
-            this.activeField = field;
+            this.settings = $.extend({}, this.settings, settings);
+            this.activeField = event.field;
 
             this._openConnectorModal();
         },
 
         _openConnectorModal: function () {
-            const newSettings = {...this.settings, folderId: this.activeFolderId}
+            var newSettings = $.extend({}, this.settings, {folderId: this.activeFolderId});
+
             if (!this.$connectorModal) {
                 this.$connectorModal = new Craft.QbankConnectorModal(newSettings);
 
@@ -170,21 +183,20 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         },
 
         _onSelectQdamAsset: function (eventData) {
-            const {elementInfo} = eventData;
             this.$connectorModal.hide();
 
             if (this.activeAssetIndex) {
-                this.activeAssetIndex._uploadedAssetIds.push(elementInfo.id)
+                this.activeAssetIndex._uploadedAssetIds.push(eventData.elementInfo.id);
                 this.activeAssetIndex._updateAfterUpload();
             }
 
             this.activeField = null;
         },
 
-        _getAssetFields: () => {
+        _getAssetFields: function () {
             if (!this.$assetFields) {
-                this.$assetFields = $('.field').filter((index, element) => {
-                    const type = $(element).data('type');
+                this.$assetFields = $('.field').filter(function (index, element) {
+                    var type = $(element).data('type');
                     return type && type.includes('craft\\fields\\Assets');
                 })
             }
@@ -193,10 +205,10 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         },
 
         _appendButton: function () {
-            const $uploadButton = this.$modal.find('.btn.submit').first();
+            var $uploadButton = this.$modal.find('.btn.submit').first();
         },
 
-        _getCurrentSource: () => {
+        _getCurrentSource: function () {
             return Craft.elementIndex.sourceKey;
         }
     });

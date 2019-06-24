@@ -24,7 +24,7 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
             qbankBaseUrl: null,
             qbankBaseDomain: null,
             defaultImageSize: 1000,
-            defaultImageExtension: 'jpg',
+            defaultImageExtension: 'jpg'
         },
         $qbankConnectorButton: null,
         $modal: null,
@@ -34,7 +34,7 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
         activeAssetIndex: null,
         activeFolderId: null,
         init: function (options) {
-            this.settings = {...this.settings, ...options}
+            this.settings = $.extend({}, this.settings, options);
 
             this.setup();
         },
@@ -47,25 +47,27 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
         },
 
         setupAssetFields: function () {
-            Garnish.on(Craft.QbankField, 'onClickButton', $.proxy(this, 'onClickAssetButton'))
+            Garnish.on(Craft.QbankField, 'onClickButton', $.proxy(this, 'onClickAssetButton'));
+            var self = this;
 
             this
                 ._getAssetFields()
-                .each((index, field) => {
-                    const qbankField = new Craft.QbankField(field, this.settings);
-                    this.qbankFields.push(qbankField);
+                .each(function (index, field) {
+                    var qbankField = new Craft.QbankField(field, self.settings);
+                    self.qbankFields.push(qbankField);
                 })
         },
 
-        getAccessToken() {
-            Craft.postActionRequest('qbank-connector/default/access-token', response => {
-                const {token} = response;
+        getAccessToken: function() {
+            var self = this;
+            Craft.postActionRequest('qbank-connector/default/access-token', function (response) {
+                var token = response.token;
 
                 if (!token) {
                     Craft.cp.displayError(Craft.t('qbank-connect', 'Could not get access token from QBank'))
                 }
 
-                this.settings.qbankAccessToken = token;
+                self.settings.qbankAccessToken = token;
             });
         },
 
@@ -98,27 +100,28 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
 
         onSelectSource: function (e) {
             if (typeof e.target.sourcesByKey !== 'undefined') {
-                const sourceElement = e.target.sourcesByKey[e.sourceKey];
-                const sourceData = sourceElement.data();
+                var sourceElement = e.target.sourcesByKey[e.sourceKey];
+                var sourceData = sourceElement.data();
             }
         },
 
         onClickAssetButton: function (event) {
-            const {field, fieldId, fieldLimit, sourceElementId} = event;
-            const settings = {
-                fieldId, fieldLimit, sourceElementId,
-                viewMode: 'list',
-            }
+            var settings = {
+                fieldId: event.fieldId,
+                fieldLimit: event.fieldLimit,
+                sourceElementId: event.sourceElementId,
+                viewMode: 'list'
+            };
 
             // Update settings
-            this.settings = {...this.settings, ...settings};
-            this.activeField = field;
+            this.settings = $.extend(this.settings, settings);
+            this.activeField = event.field;
 
             this._openConnectorModal();
         },
 
         _openConnectorModal: function () {
-            const newSettings = {...this.settings, folderId: this.activeFolderId}
+            var newSettings = $.extend(this.settings, {folderId: this.activeFolderId});
             if (!this.$connectorModal) {
                 this.$connectorModal = new Craft.QbankConnectorModal(newSettings);
 
@@ -130,12 +133,10 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
         },
 
         _onSelectQdamAsset: function (eventData) {
-            const {media, crop, previousUsage, elementInfo} = eventData;
-            const {$element} = elementInfo;
             this.$connectorModal.hide();
 
             if (this.activeField) {
-                this.activeField.selectElements([elementInfo]);
+                this.activeField.selectElements([eventData.elementInfo]);
             } else if (this.activeAssetIndex) {
 
             }
@@ -144,11 +145,13 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
             this.activeAssetIndex = null;
         },
 
-        _getAssetFields: () => {
+        _getAssetFields: function () {
             if (!this.$assetFields) {
-                this.$assetFields = $('.field').filter((index, element) => {
-                    const type = $(element).data('type');
-                    return type && type.includes('craft\\fields\\Assets');
+                this.$assetFields = $('.field').filter(function (index, element) {
+                    var type = $(element).data('type');
+                    var isAssetField = type ? type.indexOf('craft\\fields\\Assets') !== -1 : false;
+
+                    return type && isAssetField;
                 })
             }
 
@@ -158,7 +161,7 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
         _appendButton: function () {
         },
 
-        _getCurrentSource: () => {
+        _getCurrentSource: function () {
             return Craft.elementIndex.sourceKey;
         }
     });
@@ -176,7 +179,7 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
             qbankBaseDomain: null,
             defaultImageSize: 1000,
             defaultImageExtension: 'jpg',
-            defaultSourceKey: null,
+            defaultSourceKey: null
         },
         $qbankConnectorButton: null,
         $fieldInstance: null,
@@ -184,26 +187,28 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
         fieldLimit: null,
         sourceElementId: null,
         init: function (field, options) {
-            this.settings = {...this.settings, ...options}
+            this.settings = $.extend({}, this.settings, options);
 
             this.setup(field);
         },
 
         setup: function (field) {
-            const $field = $(field)
-            const $select = $field.find('.elementselect');
+            var $field = $(field);
+            var $select = $field.find('.elementselect');
 
             if ($select) {
-                const elementSelect = $select.data('elementSelect');
-                const $addElementBtn = elementSelect.$addElementBtn;
-                const $qbankButton = $addElementBtn.clone().text(Craft.t('qbank-connector', 'Add from Qbank'));
-                const {fieldId, sourceElementId, limit} = elementSelect.settings;
+                var elementSelect = $select.data('elementSelect');
+                var $addElementBtn = elementSelect.$addElementBtn;
+                var $qbankButton = $addElementBtn.clone().text(Craft.t('qbank-connector', 'Add from Qbank'));
+                var fieldId = elementSelect.settings.fieldId,
+                    sourceElementId = elementSelect.settings.sourceElementId,
+                    limit = elementSelect.settings.limit;
 
                 Garnish.on(Craft.AssetSelectInput, 'selectElements', $.proxy(this, 'onSelectElements'));
                 Garnish.on(Craft.AssetSelectInput, 'removeElements', $.proxy(this, 'onRemoveElements'));
                 Garnish.on(Craft.AssetSelectInput, 'selectionChange', $.proxy(this, 'onSelectionChange'));
 
-                let fieldLimit = parseInt(limit);
+                var fieldLimit = parseInt(limit);
 
                 if (isNaN(fieldLimit)) {
                     fieldLimit = null;
@@ -226,30 +231,26 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
                 // Append button to Asset field
                 $addElementBtn.parent().append($qbankButton);
 
-                this.$qbankConnectorButton.on('click', $.proxy(this, 'onClick'))
+                this.$qbankConnectorButton.on('click', $.proxy(this, 'onClick'));
 
                 this._initialized = true;
             }
         },
 
         onSelectElements: function (event) {
-            const {elements, target} = event
-
-            if (target === this.$fieldInstance) {
+            if (event.target === this.$fieldInstance) {
                 this.updateAddElementsBtn();
             }
         },
 
         onRemoveElements: function (event) {
-            const {elements, target} = event
-
-            if (target === this.$fieldInstance) {
+            if (event.target === this.$fieldInstance) {
                 this.updateAddElementsBtn();
             }
         },
 
         onSelectionChange: function (event) {
-            //const {elements, target} = event
+            //var {elements, target} = event
         },
 
         onClick: function (e) {
@@ -259,7 +260,7 @@ if (typeof Craft.QbankConnectorFields === typeof undefined) {
                 field: this.$fieldInstance,
                 fieldId: this.fieldId,
                 fieldLimit: this.fieldLimit,
-                sourceElementId: this.sourceElementId,
+                sourceElementId: this.sourceElementId
             });
         },
 

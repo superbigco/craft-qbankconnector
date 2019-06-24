@@ -26,7 +26,7 @@
             fieldLimit: null,
             sourceElementId: null,
             siteId: Craft.siteId,
-            viewMode: 'list',
+            viewMode: 'list'
         },
         $container: null,
         $footer: null,
@@ -52,7 +52,7 @@
             }
 
             this.setSettings(settings, Garnish.Modal.defaults);
-            this.updateSettings(settings)
+            this.updateSettings(settings);
 
             // Build the modal
             this.$container = $('<div class="qbank-connector-modal modal elementselectormodal"></div>').appendTo(Garnish.$bod);
@@ -65,8 +65,7 @@
                 '</div>' +
                 '</div>';
 
-            $body = $(bodyHtml).appendTo(this.$container);
-            this.$body = $body;
+            this.$body = $(bodyHtml).appendTo(this.$container);
 
             this.base(this.$container, this.settings);
 
@@ -83,13 +82,13 @@
             this.addListener(this.$cancelBtn, 'activate', 'cancel');
         },
 
-        onFadeIn() {
+        onFadeIn: function () {
             this.base(this.$container, this.settings);
             this.setupConnector();
         },
 
-        setupConnector() {
-            const qbcConfig = {
+        setupConnector: function () {
+            var qbcConfig = {
                 deploymentSite: this.settings.deploymentSiteId,
                 api: {
                     host: this.settings.qbankBaseDomain,
@@ -119,38 +118,40 @@
                             header: false
                         }
                     },
-                    onSelect: this.onSelect.bind(this),
+                    onSelect: this.onSelect.bind(this)
                 });
             }
         },
 
-        onSelect(media, crop, previousUsage) {
+        onSelect: function (media, crop, previousUsage) {
+            var self = this;
             this._onDownloadStart();
 
-            let currentInterval = 20;
-            this.uploadTimer = setInterval(() => {
+            var currentInterval = 20;
+            this.uploadTimer = setInterval(function () {
                 currentInterval = currentInterval + 5;
                 if (currentInterval > 100) {
                     currentInterval = 100;
                 }
-                this.progressBar.setProgressPercentage(currentInterval, true);
+                self.progressBar.setProgressPercentage(currentInterval, true);
             }, 500);
 
-            const self = this;
-            const firstCrop = crop[0];
-            const {filename, mediaId, name, dimensions, objectId} = media;
-            const payload = {
+            var firstCrop = crop[0];
+            var filename = media.filename, mediaId = media.mediaId, name = media.name, dimensions = media.dimensions,
+                objectId = media.objectId;
+
+            var payload = {
                 url: firstCrop.url,
                 crop: firstCrop,
-                media: {filename, mediaId, name, dimensions, objectId},
+                media: media,
                 folderId: this.settings.folderId,
                 fieldId: this.settings.fieldId,
                 fieldLimit: this.settings.fieldLimit,
-                sourceElementId: this.settings.sourceElementId,
-            }
+                sourceElementId: this.settings.sourceElementId
+            };
 
-            Craft.postActionRequest('qbank-connector/default/download-asset', payload, (response) => {
-                self._onDownloadComplete({media, crop, previousUsage, response});
+            Craft.postActionRequest('qbank-connector/default/download-asset', payload, function (response) {
+                self._onDownloadComplete({media: media, crop: crop, previousUsage: previousUsage, response: response});
             });
         },
 
@@ -172,15 +173,14 @@
         },
 
         _onDownloadComplete: function (event) {
-            const self = this;
-            const {response} = event;
-            const payload = {
-                elementId: response.assetId,
+            var self = this;
+            var payload = {
+                elementId: event.response.assetId,
                 siteId: this.settings.siteId,
                 viewMode: this.settings.viewMode
             };
 
-            Craft.postActionRequest('elements/get-element-html', payload, (data) => {
+            Craft.postActionRequest('elements/get-element-html', payload, function(data) {
                 clearInterval(self.uploadTimer);
                 self.progressBar.hideProgressBar();
                 self.$container.removeClass('uploading');
@@ -189,12 +189,13 @@
                 if (data.error) {
                     Craft.cp.displayError(data.error);
                 } else {
-                    const html = $(data.html);
+                    var html = $(data.html);
 
-                    self.trigger('selectAsset', {
-                        ...event,
-                        elementInfo: Craft.getElementInfo(html)
-                    });
+                    self.trigger('selectAsset', $.extend(event,
+                        {
+                            elementInfo: Craft.getElementInfo(html)
+                        }
+                    ));
 
                 }
             })
@@ -205,7 +206,6 @@
         },
 
         submit: function () {
-            const {} = this.settings;
         },
 
         cancel: function () {
@@ -223,7 +223,7 @@
         },
 
         updateSettings: function (settings) {
-            this.settings = {...this.settings, ...settings};
+            this.settings = $.extend({}, this.settings, settings);
         }
     });
 })(jQuery);
