@@ -35,24 +35,11 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         activeAssetIndex: null,
         activeFolderId: null,
         init: function (options) {
-            Garnish.on(Craft.AssetSelectorModal, 'show', $.proxy(this, 'onAssetModalOpen'));
-            //Garnish.on(Craft.AssetSelectorModal, 'fadeIn', $.proxy(this, 'onFadeIn'));
-            Garnish.on(Craft.AssetSelectorModal, 'afterInit', $.proxy(this, 'onFadeIn'));
-            Garnish.on(Craft.Uploader, 'afterInit', $.proxy(this, 'onFadeIn'));
-            Garnish.on(Craft.AssetSelectorModal, 'hide', $.proxy(this, 'onAssetModalHide'));
             Garnish.on(Craft.AssetIndex, 'afterInit', $.proxy(this, 'onAssetIndex'));
             Garnish.on(Craft.AssetIndex, 'selectSource', $.proxy(this, 'onSelectSource'));
             Garnish.on(Craft.BaseElementIndex, 'init', $.proxy(this, 'onAssetIndex'));
 
             this.settings = $.extend({}, this.settings, options);
-
-            //this.setup();
-            //this.setupConnector();
-
-            // Handle element index on page load where afterInit is fired too early
-            if (Craft.elementIndex && Craft.elementIndex['elementType'] === "craft\\elements\\Asset") {
-                //Craft.elementIndex.on('selectSource', $.proxy(this, 'onSelectSource'));
-            }
         },
 
         setup: function () {
@@ -79,29 +66,10 @@ if (typeof Craft.QbankConnector === typeof undefined) {
             });
         },
 
-        onAssetModalOpen: function () {
-            this.$modal = $('.modal.elementselectormodal').first();
-
-            if (!this.$qbankConnectorButton) {
-                this._appendButton();
-            }
-        },
-
-        onFadeIn: function () {
-            if (!this.$qbankConnectorButton) {
-                this._appendButton();
-            }
-        },
-
         onAssetModalHide: function () {
             this.$modal = null;
         },
 
-        onSelectElements: function () {
-        },
-
-        onRemoveElements: function () {
-        },
         onSelectSource: function (e) {
             if (typeof e.target.sourcesByKey !== 'undefined') {
                 var $sourceElement = e.target.sourcesByKey[e.sourceKey];
