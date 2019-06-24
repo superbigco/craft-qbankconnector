@@ -24,12 +24,14 @@
 
 return [
     // These will be supplied by QBank
-    'clientId'         => '',
-    'sessionSourceId'  => '',
-    'username'         => '',
-    'password'         => '',
-    'deploymentSiteId' => null,
+    'clientId'             => '',
+    'sessionSourceId'      => '',
+    'username'             => '',
+    'password'             => '',
+    'deploymentSiteId'     => null,
+    'enableForAssetFields' => true,
+    'enableForAssetIndex'  => true,
 
     // By default 'sales.qbank.se'
-    'baseRef'          => '',
+    'qbankBaseDomain'      => '',
 ];

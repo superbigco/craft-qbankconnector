@@ -42,9 +42,13 @@ return [
     'username'         => '',
     'password'         => '',
     'deploymentSiteId' => null,
+    
+    // Toggle on Asset Index/Fields
+    'enableForAssetFields' => true,
+    'enableForAssetIndex'  => true,
 
     // By default 'sales.qbank.se'
-    'baseRef'          => '',
+    'qbankBaseDomain'          => '',
 ];
 
 ```
