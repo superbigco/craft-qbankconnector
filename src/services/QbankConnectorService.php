@@ -25,6 +25,7 @@ use QBNK\QBank\API\Credentials;
 use QBNK\QBank\API\Model\MediaUsage;
 use QBNK\QBank\API\QBankApi;
 use superbig\qbankconnector\base\Cache;
+use superbig\qbankconnector\jobs\UsageJob;
 use superbig\qbankconnector\models\MediaModel;
 use superbig\qbankconnector\models\UsageModel;
 use superbig\qbankconnector\QbankConnector;
@@ -158,7 +159,7 @@ class QbankConnectorService extends Component
         $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
         $qbankClient     = $this->getQbankClient();
         $existingUsage   = $this
-            ->_createUsageQuery()
+            ->createUsageQuery()
             ->select([
                 'usageRecordId' => 'usage.id',
                 'usageId'       => 'usage.usageId',
@@ -220,13 +221,21 @@ class QbankConnectorService extends Component
                         'language' => 'NO',
                     ]);
 
+                    $job = new UsageJob([
+                        'mediaUsage' => $mediaUsage,
+                        'usage'      => $usage,
+                    ]);
+
+                    Craft::$app->getQueue()->push($job);
+
                     // @todo Handle exception
+                    /*
                     $response = $qbankClient
                         ->events()
                         ->addUsage($sessionId, $mediaUsage);
 
                     $this
-                        ->_createUsageQuery()
+                        ->createUsageQuery()
                         ->createCommand()
                         ->insert(QbankConnectorUsageRecord::tableName(), [
                             'fileId'    => $usage->fileId,
@@ -234,6 +243,7 @@ class QbankConnectorService extends Component
                             'usageId'   => $response->getId(),
                         ])
                         ->execute();
+                    */
                 }
             }
         }
@@ -249,31 +259,17 @@ class QbankConnectorService extends Component
         if (!empty($deleteUsageIds)) {
             Craft::info('Removing usage: ' . Json::encode($deleteUsageIds), 'qbank-connector');
 
-            foreach ($deleteUsageIds as $usageId) {
-                if (!empty($usageId)) {
-                    // @todo Handle exception
-                    $qbankClient
-                        ->events()
-                        ->removeUsage($usageId);
-                }
-            }
+            $job = new UsageJob([
+                'usageIds'        => $deleteUsageIds,
+                'sourceElementId' => $element->id,
+            ]);
 
-            $this
-                ->_createUsageQuery()
-                ->createCommand()
-                ->delete(QbankConnectorUsageRecord::tableName(), [
-                    'id'        => \array_keys($deleteUsageIds),
-                    'elementId' => $element->id,
-                ])
-                ->execute();
+            Craft::$app->getQueue()->push($job);
         }
 
         // @todo if this is a Asset, should keep folder id updated to check for existing ones?
 
         Craft::info('Related asset ids: ' . \implode(', ', $relatedAssetIds), 'qbank-connector');
-
-        // @todo Check for assets
-        // @todo Get asset ids already from Qbank
     }
 
     public function onElementBeforeDelete(ModelEvent $event)
@@ -285,7 +281,7 @@ class QbankConnectorService extends Component
         if ($element instanceof Asset) {
             // @todo Check if this is a Qbank Asset, and unregister it
             $existingUsage = $this
-                ->_createUsageQuery()
+                ->createUsageQuery()
                 ->select([
                     'usageRecordId' => 'usage.id',
                     'usageId'       => 'usage.usageId',
@@ -374,7 +370,7 @@ class QbankConnectorService extends Component
         return true;
     }
 
-    public function getSessionId()
+    public function getSessionId($isQueueJob = false)
     {
         $getSessionId = function() {
             $settings  = QbankConnector::$plugin->getSettings();
@@ -397,7 +393,7 @@ class QbankConnectorService extends Component
             return $sessionId;
         };
 
-        if (Craft::$app->getRequest()->getIsConsoleRequest()) {
+        if (Craft::$app->getRequest()->getIsConsoleRequest() || $isQueueJob) {
             return $getSessionId();
         }
 
@@ -424,7 +420,10 @@ class QbankConnectorService extends Component
     }
 
 
-    public function _createUsageQuery()
+    /**
+     * @return Query
+     */
+    public function createUsageQuery()
     {
         return (new Query())
             ->from([
