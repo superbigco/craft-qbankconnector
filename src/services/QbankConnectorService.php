@@ -319,11 +319,6 @@ class QbankConnectorService extends Component
         // @todo Loop through all media references for this asset
     }
 
-    public function toggleUsage()
-    {
-        // @todo either add or delete usage records
-    }
-
     public function saveMedia(MediaModel $media)
     {
         /*
