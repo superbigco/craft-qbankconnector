@@ -129,7 +129,6 @@ if (typeof Craft.QbankConnector === typeof undefined) {
 
                 this.activeAssetIndex = $assetIndex;
                 this.activeFolderId = activeSource ? $assetIndex.sourcesByKey[selectedSourceKey][0].dataset.folderId : null;
-                debugger;
                 var $qbankButton = $uploadButton
                     .clone()
                     .text(Craft.t('qbank-connector', 'Upload from QBank'))
