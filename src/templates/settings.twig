@@ -15,8 +15,6 @@
 
 {% import "_includes/forms" as forms %}
 
-{% do view.registerAssetBundle("superbig\\qbankconnector\\assetbundles\\qbankconnector\\QbankConnectorAsset") %}
-
 {{ forms.textField({
     label: 'Client ID',
     instructions: 'The Client ID you received from QBank.',
