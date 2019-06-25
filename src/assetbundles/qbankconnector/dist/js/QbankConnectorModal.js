@@ -143,7 +143,7 @@
             var payload = {
                 url: firstCrop.url,
                 crop: firstCrop,
-                media: media,
+                media: {filename: filename, mediaId: mediaId, name: name, dimensions: dimensions, objectId: objectId},
                 folderId: this.settings.folderId,
                 fieldId: this.settings.fieldId,
                 fieldLimit: this.settings.fieldLimit,
@@ -180,7 +180,7 @@
                 viewMode: this.settings.viewMode
             };
 
-            Craft.postActionRequest('elements/get-element-html', payload, function(data) {
+            Craft.postActionRequest('elements/get-element-html', payload, function (data) {
                 clearInterval(self.uploadTimer);
                 self.progressBar.hideProgressBar();
                 self.$container.removeClass('uploading');
