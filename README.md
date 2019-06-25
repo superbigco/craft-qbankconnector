@@ -59,8 +59,4 @@ After you install the plugin, a `Upload from QBank` button will appear under all
 
 This allow you to add assets from QBank directly to Assets fields or through the normal Assets selection modal.
 
-## QBank Connector Roadmap
-
-* Log usage async with queue jobs
-
 Brought to you by [Superbig](https://superbig.co)
