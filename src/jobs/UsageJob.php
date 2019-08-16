@@ -31,9 +31,10 @@ class UsageJob extends BaseJob
     // Public Properties
     // =========================================================================
 
+    public $sessionId;
     public $usage;
     public $mediaUsage;
-    public $usageIds = [];
+    public $deleteUsageIds = [];
     public $sourceElementId;
 
     // Public Methods
@@ -45,14 +46,17 @@ class UsageJob extends BaseJob
     public function execute($queue)
     {
         $service     = QbankConnector::$plugin->getService();
-        $sessionId   = $service->getSessionId(true);
         $qbankClient = $service->getQbankClient();
+
+        if (!$this->sessionId) {
+            $this->sessionId   = $service->getSessionId(true);
+        }
 
         if ($this->mediaUsage && $this->usage) {
             // @todo Handle exception
             $response = $qbankClient
                 ->events()
-                ->addUsage($sessionId, $this->mediaUsage);
+                ->addUsage($this->sessionId, $this->mediaUsage);
 
             $service
                 ->createUsageQuery()
@@ -67,8 +71,8 @@ class UsageJob extends BaseJob
             return true;
         }
 
-        if (!empty($this->usageIds)) {
-            foreach ($this->usageIds as $usageId) {
+        if (!empty($this->deleteUsageIds)) {
+            foreach ($this->deleteUsageIds as $usageId) {
                 $qbankClient
                     ->events()
                     ->removeUsage($usageId);
@@ -78,7 +82,7 @@ class UsageJob extends BaseJob
                 ->createUsageQuery()
                 ->createCommand()
                 ->delete(QbankConnectorUsageRecord::tableName(), [
-                    'id'        => \array_keys($this->usageIds),
+                    'id'        => \array_keys($this->deleteUsageIds),
                     'elementId' => $this->sourceElementId,
                 ])
                 ->execute();

@@ -194,7 +194,7 @@ class QbankConnectorService extends Component
             $usageMap[ $usage['assetId'] ] = $usage;
         }
 
-        $sessionId = $this->getSessionId();
+        $sessionId = $this->getSessionId(true);
         foreach ($relatedAssetIds as $assetId) {
             if (!\in_array($assetId, $existingAssetIds)) {
                 $objectId = $objectMap[ $assetId ]['objectId'] ?? null;
@@ -222,28 +222,12 @@ class QbankConnectorService extends Component
                     ]);
 
                     $job = new UsageJob([
+                        'sessionId'  => $sessionId,
                         'mediaUsage' => $mediaUsage,
                         'usage'      => $usage,
                     ]);
 
                     Craft::$app->getQueue()->push($job);
-
-                    // @todo Handle exception
-                    /*
-                    $response = $qbankClient
-                        ->events()
-                        ->addUsage($sessionId, $mediaUsage);
-
-                    $this
-                        ->createUsageQuery()
-                        ->createCommand()
-                        ->insert(QbankConnectorUsageRecord::tableName(), [
-                            'fileId'    => $usage->fileId,
-                            'elementId' => $usage->elementId,
-                            'usageId'   => $response->getId(),
-                        ])
-                        ->execute();
-                    */
                 }
             }
         }
@@ -260,7 +244,7 @@ class QbankConnectorService extends Component
             Craft::info('Removing usage: ' . Json::encode($deleteUsageIds), 'qbank-connector');
 
             $job = new UsageJob([
-                'usageIds'        => $deleteUsageIds,
+                'deleteUsageIds'        => $deleteUsageIds,
                 'sourceElementId' => $element->id,
             ]);
 
