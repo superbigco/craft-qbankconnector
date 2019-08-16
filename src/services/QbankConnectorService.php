@@ -177,9 +177,6 @@ class QbankConnectorService extends Component
             ->where(['assetId' => $relatedAssetIds])
             ->all();
 
-        Craft::info('Related usage info: ' . Json::encode($existingUsage), 'qbank-connector');
-        Craft::info('Object ids for linked assets: ' . Json::encode($existingFiles), 'qbank-connector');
-
         $existingAssetIds = \array_map(function($row) {
             return $row['assetId'];
         }, $existingUsage);
@@ -241,10 +238,8 @@ class QbankConnectorService extends Component
         }
 
         if (!empty($deleteUsageIds)) {
-            Craft::info('Removing usage: ' . Json::encode($deleteUsageIds), 'qbank-connector');
-
             $job = new UsageJob([
-                'deleteUsageIds'        => $deleteUsageIds,
+                'deleteUsageIds'  => $deleteUsageIds,
                 'sourceElementId' => $element->id,
             ]);
 
@@ -252,8 +247,6 @@ class QbankConnectorService extends Component
         }
 
         // @todo if this is a Asset, should keep folder id updated to check for existing ones?
-
-        Craft::info('Related asset ids: ' . \implode(', ', $relatedAssetIds), 'qbank-connector');
     }
 
     public function onElementBeforeDelete(ModelEvent $event)
@@ -305,22 +298,6 @@ class QbankConnectorService extends Component
 
     public function saveMedia(MediaModel $media)
     {
-        /*
-        $existingQuery = $this
-            ->_createQuery()
-            ->where([
-                'objectId'   => $media->objectId,
-                'objectHash' => $media->objectHash,
-            ])
-            ->one();
-
-        if ($existingQuery) {
-            // @todo What to do here? Don't need to download if already exists
-            // @todo Probably should include asset's folder id as unique constraint
-            return true;
-        }
-        */
-
         return $this
             ->_createQuery()
             ->createCommand()
