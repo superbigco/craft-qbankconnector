@@ -16,6 +16,7 @@ use craft\elements\Asset;
 use craft\elements\User;
 use craft\events\ModelEvent;
 use craft\helpers\Assets as AssetsHelper;
+use craft\helpers\ElementHelper;
 use craft\helpers\FileHelper;
 use craft\helpers\Json;
 use GuzzleHttp\Client;
@@ -81,6 +82,7 @@ class QbankConnectorService extends Component
      *
      * @return bool
      * @throws \yii\base\Exception
+     * @throws \Throwable
      */
     public function downloadFile(MediaModel $media)
     {
@@ -156,8 +158,13 @@ class QbankConnectorService extends Component
     {
         /** @var Element $element */
         $element         = $event->sender;
+
+        // Skip drafts and propagating elements
+        if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving) {
+            return false;
+        }
+
         $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
-        $qbankClient     = $this->getQbankClient();
         $existingUsage   = $this
             ->createUsageQuery()
             ->select([
