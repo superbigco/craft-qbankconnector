@@ -13,6 +13,7 @@ namespace superbig\qbankconnector\services;
 use craft\base\Element;
 use craft\db\Query;
 use craft\elements\Asset;
+use craft\elements\MatrixBlock;
 use craft\elements\User;
 use craft\events\ModelEvent;
 use craft\helpers\Assets as AssetsHelper;
@@ -157,7 +158,11 @@ class QbankConnectorService extends Component
     public function onElementSave(ModelEvent $event)
     {
         /** @var Element $element */
-        $element         = $event->sender;
+        $element = $event->sender;
+
+        if ($element instanceof MatrixBlock) {
+            $element = $element->getOwner();
+        }
 
         // Skip drafts and propagating elements
         if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving) {
