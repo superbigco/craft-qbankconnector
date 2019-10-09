@@ -36,6 +36,7 @@ class Settings extends Model
     public $deploymentSiteId     = null;
     public $enableForAssetFields = true;
     public $enableForAssetIndex  = true;
+    public $searchableProperties = [];
 
     // Public Methods
     // =========================================================================

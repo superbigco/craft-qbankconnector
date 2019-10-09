@@ -140,7 +140,10 @@ class QbankConnectorService extends Component
 
             $media->assetId = $asset->id;
 
+            $media->setProperties($this->getPropertiesForMedia($media));
             $this->saveMedia($media);
+
+            Craft::$app->getElements()->saveElement($asset);
 
             return true;
         } catch (RequestException $e) {
@@ -150,6 +153,16 @@ class QbankConnectorService extends Component
 
             return false;
         }
+    }
+
+    public function getPropertiesForMedia(MediaModel $media)
+    {
+        $client   = $this->getQbankClient();
+        $response = $client->media()->retrieveMedia($media->mediaId);
+
+        $properties = QbankConnector::$plugin->getSearch()->getPropertiesAsString($response);
+
+        return $properties;
     }
 
     /*
@@ -318,6 +331,7 @@ class QbankConnectorService extends Component
                 'mediaId'    => $media->mediaId,
                 'objectId'   => $media->objectId,
                 'objectHash' => $media->getObjectHash(),
+                'metadata'   => Json::encode($media->getMetadata()),
             ])
             ->execute();
     }

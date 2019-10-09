@@ -38,7 +38,7 @@ class QbankConnector extends Plugin
     /**
      * @var string
      */
-    public $schemaVersion = '1.0.2';
+    public $schemaVersion = '1.0.3';
 
     // Public Methods
     // =========================================================================
@@ -88,7 +88,8 @@ class QbankConnector extends Plugin
         return Craft::$app->view->renderTemplate(
             'qbank-connector/settings',
             [
-                'settings' => $this->getSettings(),
+                'settings'            => $this->getSettings(),
+                'availableProperties' => self::$plugin->getSearch()->getAvailableProperties(),
             ]
         );
     }

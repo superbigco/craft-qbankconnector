@@ -41,6 +41,7 @@ class MediaModel extends Model
     public $objectId;
     public $objectHash;
     public $data;
+    public $metadata;
 
     // Asset settings
     public $folderId;
@@ -99,5 +100,26 @@ class MediaModel extends Model
             ['url', 'string'],
             ['url', 'required'],
         ];
+    }
+
+    public function getMetadata()
+    {
+        return $this->metadata;
+    }
+
+    public function setMetadata(string $key, $value)
+    {
+        if (!\is_array($this->metadata)) {
+            $this->metadata = [];
+        }
+
+        $this->metadata[ $key ] = $value;
+
+        return $this;
+    }
+
+    public function setProperties(array $properties)
+    {
+        $this->setMetadata('properties', $properties);
     }
 }

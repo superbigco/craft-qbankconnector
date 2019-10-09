@@ -11,12 +11,16 @@
 namespace superbig\qbankconnector;
 
 use Craft;
+use craft\events\RegisterComponentTypesEvent;
 use craft\helpers\Json;
 use craft\log\FileTarget;
+use craft\services\Fields;
 use craft\services\Plugins;
 use craft\web\View;
 use superbig\qbankconnector\assetbundles\QbankConnector\QbankConnectorAsset;
+use superbig\qbankconnector\fields\QbankSearchableField;
 use superbig\qbankconnector\services\QbankConnectorService;
+use superbig\qbankconnector\services\SearchService;
 use yii\base\Event;
 use yii\log\Logger;
 use craft\base\Element;
@@ -61,6 +65,14 @@ trait PluginTrait
         return $this->get('qbankConnectorService');
     }
 
+    /**
+     * @return SearchService
+     */
+    public function getSearch()
+    {
+        return $this->get('search');
+    }
+
     private function _setLogging()
     {
         Craft::getLogger()->dispatcher->targets[] = new FileTarget([
@@ -73,11 +85,20 @@ trait PluginTrait
     {
         $this->setComponents([
             'qbankConnectorService' => QbankConnectorService::class,
+            'search'                => SearchService::class,
         ]);
     }
 
     private function _setEvents()
     {
+        Event::on(
+            Fields::class,
+            Fields::EVENT_REGISTER_FIELD_TYPES,
+            function(RegisterComponentTypesEvent $event) {
+                $event->types[] = QbankSearchableField::class;
+            }
+        );
+
         Event::on(Plugins::class, Plugins::EVENT_AFTER_LOAD_PLUGINS, function() {
             if ($this->isInstalled && !Craft::$app->plugins->doesPluginRequireDatabaseUpdate($this)) {
                 Event::on(
@@ -96,6 +117,7 @@ trait PluginTrait
                     return;
                 }
 
+                // @todo Refactor this to only show on pages with entry fields
                 $connectorJsUrl  = 'https://sales.qbank.se/connector/qbank-connector.min.js';
                 $settings        = QbankConnector::$plugin->getSettings();
                 $encodedSettings = Json::encode([
@@ -105,6 +127,7 @@ trait PluginTrait
                     'qbankBaseUrl'     => $settings->qbankBaseUrl,
                 ]);
                 $view            = Craft::$app->getView();
+
                 $view->registerAssetBundle(QbankConnectorAsset::class);
                 $view->registerJsFile($connectorJsUrl);
 

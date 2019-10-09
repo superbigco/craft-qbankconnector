@@ -88,6 +88,7 @@ class Install extends Migration
                     'objectId'    => $this->integer(),
                     'mediaId'     => $this->integer(),
                     'objectHash'  => $this->string(),
+                    'metadata'    => $this->longText(),
                 ]
             );
         }

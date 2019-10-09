@@ -85,3 +85,12 @@
     name: 'enableForAssetIndex',
     on: settings['enableForAssetIndex']})
 }}
+
+{{ forms.checkboxSelectField({
+    label: 'Searchable Properties',
+    instructions: 'Select which properties, like keywords, to add to the search index. This is used in combination with a custom field that is added to the Assets Field Layout.',
+    id: 'searchableProperties',
+    name: 'searchableProperties',
+    values: settings['searchableProperties'],
+    options: availableProperties, })
+}}
