@@ -65,4 +65,6 @@ To import metadata in QBank from custom fields like keywords, tags etc. into Cra
 
 After you have setup the fields to import via the plugin settings, you may add the custom field to your Assets Volume. Make sure to toggle the `Use this field’s values as search keywords?` option in the field settings.
 
+_Note: Already existing assets downloaded from QBank will not have the imported metadata. If you change which fields to import, already existing assets will not import the new fields._
+
 Brought to you by [Superbig](https://superbig.co)
