@@ -178,7 +178,7 @@ class QbankConnectorService extends Component
         }
 
         // Skip drafts and propagating elements
-        if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving) {
+        if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving || empty($element->getUrl())) {
             return false;
         }
 
