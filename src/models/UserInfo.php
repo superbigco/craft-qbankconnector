@@ -20,27 +20,18 @@ use craft\base\Model;
  * @package   QbankConnector
  * @since     1.0.0
  */
-class QbankConnectorModel extends Model
+class UserInfo extends Model
 {
     // Public Properties
     // =========================================================================
 
-    /**
-     * @var string
-     */
-    public $someAttribute = 'Some Default';
+    public $userAgent = 'Chrome';
+    public $userIp    = '127.0.0.1';
 
-    // Public Methods
-    // =========================================================================
-
-    /**
-     * @inheritdoc
-     */
-    public function rules()
+    public function getSessionCacheKey()
     {
-        return [
-            ['someAttribute', 'string'],
-            ['someAttribute', 'default', 'value' => 'Some Default'],
-        ];
+        $key = \md5("{$this->userAgent}:{$this->userIp}");
+
+        return "qbank-session-{$key}";
     }
 }

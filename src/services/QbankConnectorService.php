@@ -12,10 +12,14 @@ namespace superbig\qbankconnector\services;
 
 use craft\base\Element;
 use craft\db\Query;
+use craft\elements\actions\Delete;
 use craft\elements\Asset;
+use craft\elements\Entry;
 use craft\elements\MatrixBlock;
 use craft\elements\User;
+use craft\fields\Matrix;
 use craft\events\ModelEvent;
+use craft\helpers\ArrayHelper;
 use craft\helpers\Assets as AssetsHelper;
 use craft\helpers\ElementHelper;
 use craft\helpers\FileHelper;
@@ -24,12 +28,14 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use QBNK\QBank\API\CachePolicy;
 use QBNK\QBank\API\Credentials;
-use QBNK\QBank\API\Model\MediaUsage;
 use QBNK\QBank\API\QBankApi;
 use superbig\qbankconnector\base\Cache;
 use superbig\qbankconnector\jobs\UsageJob;
+use superbig\qbankconnector\models\DeleteReference;
 use superbig\qbankconnector\models\MediaModel;
+use superbig\qbankconnector\models\NewUsageReference;
 use superbig\qbankconnector\models\UsageModel;
+use superbig\qbankconnector\models\UserInfo;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -60,6 +66,75 @@ class QbankConnectorService extends Component
         }
 
         return new MediaModel($query);
+    }
+
+    /**
+     * @param array $assetIds
+     *
+     * @return MediaModel[]
+     */
+    public function getFilesByAssetIds(array $assetIds = [])
+    {
+        $existingFiles = $this
+            ->_createQuery()
+            ->where(['assetId' => $assetIds])
+            ->all();
+
+        return array_map(function($row) {
+            return new MediaModel($row);
+        }, $existingFiles);
+    }
+
+    /**
+     * @param $element
+     *
+     * @return UsageModel[]
+     */
+    public function getUsageForElement($element)
+    {
+        $usage = $this
+            ->createUsageQuery()
+            ->select([
+                'id'      => 'usage.id',
+                'usageId' => 'usage.usageId',
+                'fileId'  => 'usage.fileId',
+                'assetId' => 'files.assetId',
+            ])
+            ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
+            ->where([
+                'usage.elementId' => $element->id,
+            ])
+            ->all();
+
+        return array_map(function($row) {
+            return new UsageModel($row);
+        }, $usage);
+    }
+
+    /**
+     * @param Asset $asset
+     *
+     * @return UsageModel[]
+     */
+    public function getUsageForAsset(Asset $asset)
+    {
+        $usage = $this
+            ->createUsageQuery()
+            ->select([
+                'id'      => 'usage.id',
+                'usageId' => 'usage.usageId',
+                'fileId'  => 'usage.fileId',
+                'assetId' => 'files.assetId',
+            ])
+            ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
+            ->where([
+                'files.assetId' => $asset->id,
+            ])
+            ->all();
+
+        return array_map(function($row) {
+            return new UsageModel($row);
+        }, $usage);
     }
 
     /**
@@ -165,160 +240,155 @@ class QbankConnectorService extends Component
         return $properties;
     }
 
-    /*
-     * @return mixed
-     */
     public function onElementSave(ModelEvent $event)
     {
+        if (!$this->reportUsageEnabled()) {
+            return;
+        }
+
+        $fileMap  = [];
+        $usageMap = [];
+        $userInfo = $this->_getUserInfo();
+
         /** @var Element $element */
         $element = $event->sender;
+
+        // Skip drafts and propagating elements
+        if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving || empty($element->getUrl())) {
+            return;
+        }
 
         if ($element instanceof MatrixBlock) {
             $element = $element->getOwner();
         }
 
-        // Skip drafts and propagating elements
-        if (ElementHelper::isDraftOrRevision($element) || $element->propagating || $element->resaving || empty($element->getUrl())) {
-            return false;
-        }
+        $pageTitle       = $element->title ?? '';
+        $relatedAssetIds = $this->getRelatedAssetsIdsForElement($element);
+        $existingUsage   = $this->getUsageForElement($element);
+        $existingFiles   = $this->getFilesByAssetIds($relatedAssetIds);
 
-        $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
-        $existingUsage   = $this
-            ->createUsageQuery()
-            ->select([
-                'usageRecordId' => 'usage.id',
-                'usageId'       => 'usage.usageId',
-                'fileId'        => 'usage.fileId',
-                'assetId'       => 'files.assetId',
-            ])
-            ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
-            ->where([
-                'usage.elementId' => $element->id,
-            ])
-            ->all();
-
-        $existingFiles = $this
-            ->_createQuery()
-            ->where(['assetId' => $relatedAssetIds])
-            ->all();
-
-        $existingAssetIds = \array_map(function($row) {
-            return $row['assetId'];
+        $existingAssetIds = \array_map(function(UsageModel $usage) {
+            return $usage->assetId;
         }, $existingUsage);
-        $objectMap        = [];
-        $usageMap         = [];
 
-        foreach ($existingFiles as $object) {
-            $objectMap[ $object['assetId'] ] = $object;
+        // Map files to array for easier access
+        foreach ($existingFiles as $file) {
+            $fileMap[ $file->assetId ] = $file;
         }
 
         foreach ($existingUsage as $usage) {
-            $usageMap[ $usage['assetId'] ] = $usage;
+            $usageMap[ $usage->assetId ] = $usage;
         }
 
-        $sessionId = $this->getSessionId(true);
-        foreach ($relatedAssetIds as $assetId) {
-            if (!\in_array($assetId, $existingAssetIds)) {
-                $objectId = $objectMap[ $assetId ]['objectId'] ?? null;
+        $newUsageReferences  = [];
+        $deletedReferences   = [];
+        $nonExistingAssetIds = array_diff($relatedAssetIds, $existingAssetIds);
+        $removedAssetIds     = array_diff($existingAssetIds, $relatedAssetIds);
+
+        if (!empty($nonExistingAssetIds)) {
+            // This is new asset ids that haven't got a usage record
+            foreach ($nonExistingAssetIds as $assetId) {
+                $objectId = ArrayHelper::getValue($fileMap, "{$assetId}.objectId");
 
                 if ($objectId) {
-                    $pageTitle = $element->title ?? '';
-                    $usage     = new UsageModel([
-                        'fileId'    => $objectMap[ $assetId ]['id'],
-                        'elementId' => $element->id,
+                    $fileId               = ArrayHelper::getValue($fileMap, "{$assetId}.id");
+                    $mediaId              = ArrayHelper::getValue($fileMap, "{$assetId}.mediaId");
+                    $asset                = Asset::find()->id($assetId)->one();
+                    $newUsageReferences[] = new NewUsageReference([
+                        'sourceElementId' => $element->id,
+                        'pageTitle'       => $pageTitle,
+                        'pageUrl'         => $element->getUrl(),
+                        'assetId'         => $assetId,
+                        'mediaId'         => $mediaId,
+                        'mediaUrl'        => $asset->getUrl(),
+                        'fileId'          => $fileId,
                     ]);
-
-                    $asset = Asset::find()->id($assetId)->one();
-
-                    $mediaUsage = new MediaUsage([
-                        'mediaId'  => $objectMap[ $assetId ]['mediaId'],
-                        'mediaUrl' => $asset->getUrl(),
-                        'pageUrl'  => $element->getUrl(),
-                        // @todo Add context as setting?
-                        'context'  => [
-                            'localID'   => $assetId,
-                            'pageTitle' => $pageTitle,
-                        ],
-                        // @todo Add language as setting?
-                        'language' => 'NO',
-                    ]);
-
-                    $job = new UsageJob([
-                        'sessionId'  => $sessionId,
-                        'mediaUsage' => $mediaUsage,
-                        'usage'      => $usage,
-                    ]);
-
-                    Craft::$app->getQueue()->push($job);
                 }
             }
+
+            $this->reportUsage($newUsageReferences, $userInfo);
         }
 
-        $deleteUsageIds = [];
-        foreach ($existingAssetIds as $assetId) {
-            if (!\in_array($assetId, $relatedAssetIds)) {
-                $key                    = $usageMap[ $assetId ]['usageRecordId'];
-                $deleteUsageIds[ $key ] = $usageMap[ $assetId ]['usageId'];
+        if (!empty($removedAssetIds)) {
+            foreach ($removedAssetIds as $deletedAssetId) {
+                $deletedReferences[] = new DeleteReference([
+                    'recordId'        => ArrayHelper::getValue($usageMap, "{$deletedAssetId}.id"),
+                    'usageId'         => ArrayHelper::getValue($usageMap, "{$deletedAssetId}.usageId"),
+                    'sourceElementId' => $element->id,
+                ]);
             }
+
+            $this->reportRemovedUsage($deletedReferences, $userInfo);
         }
+    }
 
-        if (!empty($deleteUsageIds)) {
-            $job = new UsageJob([
-                'deleteUsageIds'  => $deleteUsageIds,
-                'sourceElementId' => $element->id,
-            ]);
+    public function reportUsage(array $references, UserInfo $userInfo)
+    {
+        $job = new UsageJob([
+            'newUsageReferences' => $references,
+            'userIp'             => $userInfo->userIp,
+            'userAgent'          => $userInfo->userAgent,
+        ]);
 
-            Craft::$app->getQueue()->push($job);
-        }
+        Craft::$app->getQueue()->push($job);
+    }
 
-        // @todo if this is a Asset, should keep folder id updated to check for existing ones?
+    /**
+     * @param DeleteReference[] $references
+     * @param UserInfo          $userInfo
+     */
+    public function reportRemovedUsage(array $references, UserInfo $userInfo)
+    {
+        $job = new UsageJob([
+            'deleteUsageReferences' => $references,
+            'userIp'                => $userInfo->userIp,
+            'userAgent'             => $userInfo->userAgent,
+        ]);
+
+        Craft::$app->getQueue()->push($job);
     }
 
     public function onElementBeforeDelete(ModelEvent $event)
     {
+        if (!$this->reportUsageEnabled()) {
+            return;
+        }
+
+        $deletedReferences = [];
         /** @var Element $element */
-        $element     = $event->sender;
-        $qbankClient = $this->getQbankClient();
+        $element = $event->sender;
 
         if ($element instanceof Asset) {
-            // @todo Check if this is a Qbank Asset, and unregister it
-            $existingUsage = $this
-                ->createUsageQuery()
-                ->select([
-                    'usageRecordId' => 'usage.id',
-                    'usageId'       => 'usage.usageId',
-                    'fileId'        => 'usage.fileId',
-                    'assetId'       => 'files.assetId',
-                ])
-                ->innerJoin(QbankConnectorRecord::tableName() . ' files', '[[files.id]] = [[usage.fileId]]')
-                ->where([
-                    'usage.elementId' => $element->id,
-                ])
-                ->all();
+            $existingUsage = $this->getUsageForAsset($element);
+
+            if (!empty($existingUsage)) {
+                foreach ($existingUsage as $usage) {
+                    $deletedReferences[] = new DeleteReference([
+                        'recordId'        => $usage->id,
+                        'usageId'         => $usage->usageId,
+                        'sourceElementId' => $usage->elementId,
+                    ]);
+                }
+
+                $this->reportRemovedUsage($deletedReferences, new UserInfo());
+            }
+
         }
         else {
-            $relatedAssetIds = Asset::find()->relatedTo($element)->ids();
-            $existingFiles   = $this
-                ->_createQuery()
-                ->where(['assetId' => $relatedAssetIds])
-                ->all();
+            $existingUsage = $this->getUsageForElement($element);
 
-            foreach ($existingFiles as $row) {
-                $usageId = $row['usageId'] ?? null;
-
-                if (!empty($usageId)) {
-                    // @todo Handle exception
-                    $qbankClient
-                        ->events()
-                        ->removeUsage($usageId);
+            if (!empty($existingUsage)) {
+                foreach ($existingUsage as $usage) {
+                    $deletedReferences[] = new DeleteReference([
+                        'recordId'        => $usage->id,
+                        'usageId'         => $usage->usageId,
+                        'sourceElementId' => $usage->elementId,
+                    ]);
                 }
+
+                $this->reportRemovedUsage($deletedReferences, new UserInfo());
             }
         }
-    }
-
-    public function syncAssetUsageForElement()
-    {
-        // @todo Loop through all media references for this asset
     }
 
     public function saveMedia(MediaModel $media)
@@ -352,30 +422,37 @@ class QbankConnectorService extends Component
         return true;
     }
 
-    public function getSessionId($isQueueJob = false)
+    public function getSessionId(UserInfo $info, $isQueueJob = false)
     {
-        $getSessionId = function() {
-            $settings  = QbankConnector::$plugin->getSettings();
-            $user      = Craft::$app->getUser()->getIdentity() ?? User::find()->one();
-            $userIp    = '127.0.0.1';
-            $userAgent = 'Chrome';
-
-            if (!Craft::$app->getRequest()->getIsConsoleRequest()) {
-                $userIp    = Craft::$app->getRequest()->getUserIP();
-                $userAgent = Craft::$app->getRequest()->getUserAgent();
-            }
+        $settings     = QbankConnector::$plugin->getSettings();
+        $getSessionId = function() use ($info, $settings) {
+            $user = Craft::$app->getUser()->getIdentity() ?? User::find()->one();
 
             $sessionId = $this->getQbankClient()->events()->session(
                 $settings->sessionSourceId,
                 $user->uid,
-                $userIp,
-                $userAgent
+                $info->userIp,
+                $info->userAgent
             );
 
             return $sessionId;
         };
 
         if (Craft::$app->getRequest()->getIsConsoleRequest() || $isQueueJob) {
+            if ($settings->cacheSessionId) {
+                $cachedSessionId = Craft::$app->getCache()->getOrSet(
+                    $info->getSessionCacheKey(),
+                    function() use ($getSessionId) {
+                        return $getSessionId();
+                    },
+                    $settings->cacheDuration
+                );
+
+                if ($cachedSessionId) {
+                    return $cachedSessionId;
+                }
+            }
+
             return $getSessionId();
         }
 
@@ -388,6 +465,36 @@ class QbankConnectorService extends Component
         return $session->get('QBANK_SESSION');
     }
 
+    public function getRelatedAssetsIdsForElement(Element $element)
+    {
+        $ids                = Asset::find()->relatedTo($element)->ids();
+        $matrixFieldHandles = $this->getMatrixFieldHandlesForEntry($element);
+
+        foreach ($matrixFieldHandles as $handle) {
+            $childIds = Asset::find()->relatedTo([
+                'sourceElement' => $element,
+                // @todo Might need to loop over block type handles with asset fields
+                'field'         => $handle,
+            ])->ids();
+
+            $ids = array_merge($ids, $childIds);
+        }
+
+        return array_unique($ids);
+    }
+
+    public function getMatrixFieldHandlesForEntry(Element $element)
+    {
+        $fieldLayout = $element->getFieldLayout();
+        $fields      = array_filter($fieldLayout->getFields(), function($field) {
+            return $field instanceof Matrix;
+        });
+
+        return array_map(function($field) {
+            return $field->handle;
+        }, $fields);
+    }
+
     public function _createQuery()
     {
         return (new Query())
@@ -398,9 +505,9 @@ class QbankConnectorService extends Component
                 'mediaId',
                 'objectId',
                 'objectHash',
+                'metadata',
             ]);
     }
-
 
     /**
      * @return Query
@@ -416,5 +523,29 @@ class QbankConnectorService extends Component
                 'elementId',
                 'fileId',
             ]);
+    }
+
+    /**
+     * @return UserInfo
+     */
+    private function _getUserInfo()
+    {
+        $userIp    = '127.0.0.1';
+        $userAgent = 'Chrome';
+
+        if (!Craft::$app->getRequest()->getIsConsoleRequest()) {
+            $userIp    = Craft::$app->getRequest()->getUserIP();
+            $userAgent = Craft::$app->getRequest()->getUserAgent();
+        }
+
+        return new UserInfo([
+            'userIp'    => $userIp,
+            'userAgent' => $userAgent,
+        ]);
+    }
+
+    private function reportUsageEnabled()
+    {
+        return QbankConnector::$plugin->getSettings()->reportUsage;
     }
 }

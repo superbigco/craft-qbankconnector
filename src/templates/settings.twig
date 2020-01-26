@@ -71,6 +71,14 @@
 }}
 
 {{ forms.lightswitchField({
+    label: 'Cache Session ID',
+    instructions: 'This will prevent the plugin for making a request every time it needs a session ID',
+    id: 'cacheSessionId',
+    name: 'cacheSessionId',
+    on: settings['cacheSessionId']})
+}}
+
+{{ forms.lightswitchField({
     label: 'Assets Fields',
     instructions: 'Show the QBank upload button on Asset Fields',
     id: 'enableForAssetFields',

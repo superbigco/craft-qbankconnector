@@ -10,8 +10,13 @@
 
 namespace superbig\qbankconnector\jobs;
 
+use craft\helpers\Json;
+use QBNK\QBank\API\Exception\RequestException;
 use QBNK\QBank\API\Model\MediaUsage;
+use superbig\qbankconnector\models\DeleteReference;
+use superbig\qbankconnector\models\NewUsageReference;
 use superbig\qbankconnector\models\UsageModel;
+use superbig\qbankconnector\models\UserInfo;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -23,80 +28,149 @@ use superbig\qbankconnector\records\QbankConnectorUsageRecord;
  * @package   QbankConnector
  * @since     1.0.0
  *
- * @property UsageModel $usage
- * @property MediaUsage $mediaUsage
+ * @property NewUsageReference[] newUsageReferences
+ * @property DeleteReference[]   $deleteUsageReferences
  */
 class UsageJob extends BaseJob
 {
     // Public Properties
     // =========================================================================
 
+    public $userIp;
+    public $userAgent;
     public $sessionId;
-    public $usage;
-    public $mediaUsage;
-    public $deleteUsageIds = [];
-    public $sourceElementId;
+    public $newUsageReferences    = [];
+    public $deleteUsageReferences = [];
 
-    // Public Methods
-    // =========================================================================
-
-    /**
-     * @inheritdoc
-     */
     public function execute($queue)
     {
         $service     = QbankConnector::$plugin->getService();
         $qbankClient = $service->getQbankClient();
 
         if (!$this->sessionId) {
-            $this->sessionId   = $service->getSessionId(true);
+            $userInfo        = new UserInfo([
+                'userIp'    => $this->userIp,
+                'userAgent' => $this->userAgent,
+            ]);
+            $this->sessionId = $service->getSessionId($userInfo, true);
         }
 
-        if ($this->mediaUsage && $this->usage) {
-            // @todo Handle exception
-            $response = $qbankClient
-                ->events()
-                ->addUsage($this->sessionId, $this->mediaUsage);
+        // If QBank is having problems on their end, this should fail because there is no session id
+        if (!$this->sessionId) {
+            $error = Craft::t('qbank-connector', 'QBank did not return a session id');
 
-            $service
-                ->createUsageQuery()
-                ->createCommand()
-                ->insert(QbankConnectorUsageRecord::tableName(), [
-                    'fileId'    => $this->usage->fileId,
-                    'elementId' => $this->usage->elementId,
-                    'usageId'   => $response->getId(),
-                ])
-                ->execute();
+            QbankConnector::error($error);
 
-            return true;
+            return false;
         }
 
-        if (!empty($this->deleteUsageIds)) {
-            foreach ($this->deleteUsageIds as $usageId) {
-                $qbankClient
-                    ->events()
-                    ->removeUsage($usageId);
+        if ($this->hasNewUsageReferences()) {
+            foreach ($this->newUsageReferences as $reference) {
+                $existingUsageRecord = $service
+                    ->createUsageQuery()
+                    ->where([
+                        'fileId'    => $reference->fileId,
+                        'elementId' => $reference->sourceElementId,
+                    ])
+                    ->one();
+
+                if ($existingUsageRecord) {
+                    QbankConnector::error("Found existing record for {$reference->assetId} to element {$reference->sourceElementId}, skipping");
+
+                    continue;
+                }
+
+                try {
+                    // @todo Handle exception
+                    $response = $qbankClient
+                        ->events()
+                        ->addUsage($this->sessionId, $reference->getMediaUsageForQbank());
+                } catch (RequestException $e) {
+                    $this->handleException($e);
+                }
+
+                QbankConnector::error("Reported usage for {$reference->assetId} to element {$reference->sourceElementId}. Got id {$response->getId()}");
+
+                $recordCreated = $service
+                    ->createUsageQuery()
+                    ->createCommand()
+                    ->insert(QbankConnectorUsageRecord::tableName(), [
+                        'fileId'    => $reference->fileId,
+                        'elementId' => $reference->sourceElementId,
+                        'usageId'   => $response->getId(),
+                    ])
+                    ->execute();
+
+                if (!$recordCreated) {
+                    QbankConnector::error('Failed to create record for usage ' . $response->getId());
+                }
             }
+        }
 
-            $service
-                ->createUsageQuery()
-                ->createCommand()
-                ->delete(QbankConnectorUsageRecord::tableName(), [
-                    'id'        => \array_keys($this->deleteUsageIds),
-                    'elementId' => $this->sourceElementId,
-                ])
-                ->execute();
+        if ($this->hasDeleteUsageReferences()) {
+            foreach ($this->deleteUsageReferences as $reference) {
+                QbankConnector::error("Reporting removal of usage for {$reference->usageId} to element {$reference->sourceElementId}.");
 
-            return true;
+                $existingUsageRecord = $service
+                    ->createUsageQuery()
+                    ->where([
+                        'id' => $reference->recordId,
+                    ])
+                    ->one();
+
+                if (!$existingUsageRecord) {
+                    // @todo This might be because the deletion cascades when a element is deleted
+                    // @todo Should this be a setting? A smarter check? Happen inline?
+                    QbankConnector::error("Record for {$reference->recordId} to element {$reference->sourceElementId} does not exist anymore, skipping.");
+
+                    continue;
+                }
+
+                try {
+                    $qbankClient
+                        ->events()
+                        ->removeUsage($reference->usageId);
+                } catch (RequestException $e) {
+                    $this->handleException($e);
+                }
+
+                $service
+                    ->createUsageQuery()
+                    ->createCommand()
+                    ->delete(QbankConnectorUsageRecord::tableName(), [
+                        'id'        => [$reference->recordId],
+                        'elementId' => $reference->sourceElementId,
+                    ])
+                    ->execute();
+
+                QbankConnector::error("Removed record {$reference->recordId} for {$reference->usageId}.");
+            }
         }
     }
 
-    // Protected Methods
-    // =========================================================================
+    public function hasNewUsageReferences()
+    {
+        return !empty($this->newUsageReferences);
+    }
 
-    /**
-     * @inheritdoc
-     */
+    public function hasDeleteUsageReferences()
+    {
+        return !empty($this->deleteUsageReferences);
+    }
+
+    public function handleException($e)
+    {
+        if ($e instanceof RequestException) {
+            /** @var RequestException $e */
+            $message = $e->getMessage();
+            $details = Json::encode($e->getDetails());
+
+            QbankConnector::error("QBank call failed: {$message}. Details: {$details}");
+        }
+
+        throw $e;
+    }
+
     protected function defaultDescription(): string
     {
         return Craft::t('qbank-connector', 'QBank Usage Reporting');

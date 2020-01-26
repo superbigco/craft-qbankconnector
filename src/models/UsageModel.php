@@ -10,9 +10,6 @@
 
 namespace superbig\qbankconnector\models;
 
-use superbig\qbankconnector\QbankConnector;
-
-use Craft;
 use craft\base\Model;
 
 /**
@@ -30,6 +27,7 @@ class UsageModel extends Model
     public $fileId;
     public $objectId;
     public $assetId;
+    public $usageId;
 
     // Public Methods
     // =========================================================================

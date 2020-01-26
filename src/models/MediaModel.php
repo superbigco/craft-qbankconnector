@@ -11,6 +11,7 @@
 namespace superbig\qbankconnector\models;
 
 use craft\fields\Assets;
+use craft\helpers\Json;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -48,8 +49,14 @@ class MediaModel extends Model
     public $sourceElementId;
     public $fieldId;
 
-    // Public Methods
-    // =========================================================================
+    public function init()
+    {
+        parent::init();
+
+        if (is_string($this->metadata)) {
+            $this->metadata = Json::decodeIfJson($this->metadata);
+        }
+    }
 
     public function getTempFilename(): string
     {

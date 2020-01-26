@@ -43,6 +43,9 @@ return [
     'password'         => '',
     'deploymentSiteId' => null,
 
+    // Toggle usage reporting to QBank
+    'reportUsage'          => true,
+
     // Toggle on Asset Index/Fields
     'enableForAssetFields' => true,
     'enableForAssetIndex'  => true,
@@ -50,7 +53,6 @@ return [
     // By default 'sales.qbank.se'
     'qbankBaseDomain'          => '',
 ];
-
 ```
 
 ## Using QBank Connector

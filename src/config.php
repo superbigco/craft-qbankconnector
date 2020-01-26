@@ -31,6 +31,7 @@ return [
     'deploymentSiteId'     => null,
     'enableForAssetFields' => true,
     'enableForAssetIndex'  => true,
+    'reportUsage'          => true,
 
     // By default 'sales.qbank.se'
     'qbankBaseDomain'      => '',
