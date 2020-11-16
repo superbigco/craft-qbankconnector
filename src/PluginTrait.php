@@ -17,7 +17,7 @@ use craft\log\FileTarget;
 use craft\services\Fields;
 use craft\services\Plugins;
 use craft\web\View;
-use superbig\qbankconnector\assetbundles\QbankConnector\QbankConnectorAsset;
+use superbig\qbankconnector\assetbundles\qbankconnector\QbankConnectorAsset;
 use superbig\qbankconnector\fields\QbankSearchableField;
 use superbig\qbankconnector\services\QbankConnectorService;
 use superbig\qbankconnector\services\SearchService;

@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2019 Superbig
  */
 
-namespace superbig\qbankconnector\assetbundles\QbankConnector;
+namespace superbig\qbankconnector\assetbundles\qbankconnector;
 
 use Craft;
 use craft\web\AssetBundle;
