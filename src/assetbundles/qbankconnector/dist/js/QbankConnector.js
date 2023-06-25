@@ -49,6 +49,12 @@ if (typeof Craft.QbankConnector === typeof undefined) {
             }
         },
 
+        toggleButton: function() {
+            const isDisabled = !self.settings || !self.settings.qbankAccessToken
+
+            this.$qbankConnectorButton.toggleClass('disabled', isDisabled).attr('disabled', function() { return isDisabled ? 'disabled' : null})
+        },
+
         setupAssetFields: function () {
             Garnish.on(Craft.QbankField, 'onClickButton', $.proxy(this, 'onClickAssetButton'))
         },
@@ -63,6 +69,8 @@ if (typeof Craft.QbankConnector === typeof undefined) {
                 }
 
                 self.settings.qbankAccessToken = token;
+
+                self.toggleButton()
             });
         },
 
@@ -79,6 +87,7 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         },
 
         onAssetIndex: function (event) {
+            var self = this
             var $assetIndex = event.target;
             var $uploadButton = $assetIndex.$uploadButton;
 
@@ -100,11 +109,14 @@ if (typeof Craft.QbankConnector === typeof undefined) {
                 var $qbankButton = $uploadButton
                     .clone()
                     .text(Craft.t('qbank-connector', 'Upload from QBank'))
-                    .addClass('qbank-upload-button--assetindex')
+                    .addClass('qbank-upload-button--assetindex disabled')
+                    .attr('disabled', 'disabled')
                     .removeClass('submit');
 
                 $uploadButton.parent().prepend($qbankButton);
                 $qbankButton.on('click', $.proxy(this, 'onClickAssetIndexButton'))
+
+                this.$qbankConnectorButton = $qbankButton
             }
         },
 
