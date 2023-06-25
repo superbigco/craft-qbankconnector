@@ -11,8 +11,7 @@
 namespace superbig\qbankconnector\base;
 
 use Craft;
-use craft\helpers\ArrayHelper;
-use Psr\SimpleCache\CacheInterface;
+use \Doctrine\Common\Cache\Cache as CacheInterface;
 
 /**
  * @author    Superbig
@@ -21,43 +20,87 @@ use Psr\SimpleCache\CacheInterface;
  */
 class Cache implements CacheInterface
 {
-    public function get($key, $default = null)
+    /**
+     * Fetches an entry from the cache.
+     *
+     * @param string $id The id of the cache entry to fetch.
+     *
+     * @return mixed The cached data or FALSE, if no cache entry exists for the given id.
+     */
+    public function fetch($id): mixed
     {
-        return Craft::$app->getCache()->get($key);
+        return Craft::$app->getCache()->get($id);
     }
 
-    public function set($key, $value, $ttl = null)
+    /**
+     * Tests if an entry exists in the cache.
+     *
+     * @param string $id The cache id of the entry to check for.
+     *
+     * @return bool TRUE if a cache entry exists for the given cache id, FALSE otherwise.
+     */
+    public function contains($id): bool
     {
-        return Craft::$app->getCache()->set($key, $value, $ttl);
+        return (bool)$this->fetch($id);
     }
 
-    public function clear()
+    /**
+     * Puts data into the cache.
+     *
+     * If a cache entry with the given id already exists, its data will be replaced.
+     *
+     * @param string $id       The cache id.
+     * @param mixed  $data     The cache entry/data.
+     * @param int    $lifeTime The lifetime in number of seconds for this cache entry.
+     *                         If zero (the default), the entry never expires (although it may be deleted from the cache
+     *                         to make place for other entries).
+     *
+     * @return bool TRUE if the entry was successfully stored in the cache, FALSE otherwise.
+     */
+    public function save($id, $data, $lifeTime = 0): bool
     {
-        return Craft::$app->getCache()->flush();
+        return Craft::$app->getCache()->set($id, $data, $lifeTime);
     }
 
-    public function getMultiple($keys, $default = null)
+    /**
+     * Deletes a cache entry.
+     *
+     * @param string $id The cache id.
+     *
+     * @return bool TRUE if the cache entry was successfully deleted, FALSE otherwise.
+     *              Deleting a non-existing entry is considered successful.
+     */
+    public function delete($id): bool
     {
-        return array_map(fn($key) => Craft::$app->getCache()->get($key), (array)$keys);
+        return Craft::$app->getCache()->delete($id);
     }
 
-    public function setMultiple($values, $ttl = null)
+    /**
+     * Retrieves cached information from the data store.
+     *
+     * The server's statistics array has the following values:
+     *
+     * - <b>hits</b>
+     * Number of keys that have been requested and found present.
+     *
+     * - <b>misses</b>
+     * Number of items that have been requested and not found.
+     *
+     * - <b>uptime</b>
+     * Time that the server is running.
+     *
+     * - <b>memory_usage</b>
+     * Memory used by this server to store items.
+     *
+     * - <b>memory_available</b>
+     * Memory allowed to use for storage.
+     *
+     * @since 2.2
+     *
+     * @return array|null An associative array with server's statistics if available, NULL otherwise.
+     */
+    public function getStats(): mixed
     {
-        // TODO: Implement setMultiple() method.
-    }
-
-    public function deleteMultiple($keys)
-    {
-        // TODO: Implement deleteMultiple() method.
-    }
-
-    public function has($key)
-    {
-        return Craft::$app->getCache()->exists($key);
-    }
-
-    public function delete($key)
-    {
-        return Craft::$app->getCache()->delete($key);
+        return null;
     }
 }

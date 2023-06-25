@@ -24,7 +24,7 @@
   ],
   "require": {
     "craftcms/cms": "^3.8.0",
-    "qbnk/qbank3api-phpwrapper": "^6.2"
+    "qbnk/qbank3api-phpwrapper": "^4.9.2"
   },
   "autoload": {
     "psr-4": {

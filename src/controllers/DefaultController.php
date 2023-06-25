@@ -10,6 +10,7 @@
 
 namespace superbig\qbankconnector\controllers;
 
+use GuzzleHttp\Exception\ClientException;
 use Sainsburys\Guzzle\Oauth2\AccessToken;
 use superbig\qbankconnector\models\MediaModel;
 use superbig\qbankconnector\QbankConnector;
@@ -80,18 +81,30 @@ class DefaultController extends Controller
      */
     public function actionAccessToken()
     {
-        $client = QbankConnector::$plugin->getService()->getQbankClient();
-        /** @var AccessToken $token */
-        $token = $client->getTokens()['accessToken'] ?? null;
+        try {
+            $client = QbankConnector::$plugin->getService()->getQbankClient();
+            /** @var AccessToken|null $token */
+            $token = $client->getTokens()['accessToken'] ?? null;
 
-        if (!$token) {
+            if (!$token) {
+                return $this->asJson([
+                    'token' => null,
+                ]);
+            }
+
+            return $this->asJson([
+                'token' => $token->getToken(),
+            ]);
+        } catch (ClientException $e) {
             return $this->asJson([
                 'token' => null,
+                'error' => $e->getMessage(),
+            ]);
+        } catch (\Exception $e) {
+            return $this->asJson([
+                'token' => null,
+                'error' => $e->getMessage(),
             ]);
         }
-
-        return $this->asJson([
-            'token' => $token->getToken(),
-        ]);
     }
 }
