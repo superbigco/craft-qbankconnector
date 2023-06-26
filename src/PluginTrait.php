@@ -123,7 +123,7 @@ trait PluginTrait
                 $encodedSettings = Json::encode([
                     'sessionSourceId'  => $settings->sessionSourceId,
                     'deploymentSiteId' => $settings->deploymentSiteId,
-                    'qbankBaseDomain'  => $settings->qbankBaseDomain,
+                    'qbankBaseDomain'  => $settings->getBaseDomain(),
                     'qbankBaseUrl'     => $settings->qbankBaseUrl,
                 ]);
                 $view            = Craft::$app->getView();

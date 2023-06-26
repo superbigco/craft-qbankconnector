@@ -13,6 +13,7 @@ namespace superbig\qbankconnector\models;
 use craft\elements\Entry;
 use craft\elements\MatrixBlock;
 use craft\elements\User;
+use superbig\qbankconnector\helpers\UrlHelper;
 use superbig\qbankconnector\QbankConnector;
 
 use Craft;
@@ -25,9 +26,6 @@ use craft\base\Model;
  */
 class Settings extends Model
 {
-    // Public Properties
-    // =========================================================================
-
     public $connectionTimeout            = 10;
     public $clientId                     = '';
     public $sessionSourceId              = '';
@@ -49,12 +47,11 @@ class Settings extends Model
         MatrixBlock::class,
     ];
 
-    // Public Methods
-    // =========================================================================
+    public function getBaseDomain()
+    {
+        return UrlHelper::getBaseHost($this->qbankBaseDomain, 'sales.qbank.se');
+    }
 
-    /**
-     * @inheritdoc
-     */
     public function rules()
     {
         return [
