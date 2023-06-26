@@ -50,9 +50,11 @@ if (typeof Craft.QbankConnector === typeof undefined) {
         },
 
         toggleButton: function() {
-            const isDisabled = !self.settings || !self.settings.qbankAccessToken
+            const isDisabled = !this.settings || !this.settings.qbankAccessToken
 
-            this.$qbankConnectorButton.toggleClass('disabled', isDisabled).attr('disabled', function() { return isDisabled ? 'disabled' : null})
+            this.$qbankConnectorButton
+                .toggleClass('disabled', isDisabled)
+                .attr('disabled', function() { return isDisabled ? 'disabled' : null})
         },
 
         setupAssetFields: function () {
